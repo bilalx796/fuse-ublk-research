@@ -3,6 +3,8 @@
 Measuring how much overhead the **FUSE** and **ublk** userspace interfaces add on Linux 6.8,
 where that overhead comes from, and when it matters.
 
+**Resuming work?** Read [notes/NEXT-SESSION.md](notes/NEXT-SESSION.md) first.
+
 **Start here:** [results/README.md](results/README.md) is a plain-language overview of what
 we tested, how, and what we found.
 
