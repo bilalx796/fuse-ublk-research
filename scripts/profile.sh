@@ -11,7 +11,7 @@ out="$root/results/profile/$setup-$rw-$bs"; mkdir -p "$out"
 SECS="${SECS:-10}"
 
 if [[ -b "$target" ]]; then where=(--filename="$target"); else where=(--directory="$target" --filename=fio.dat); fi
-fio_cmd=(fio --name=prof "${where[@]}" --size=4g --rw="$rw" --bs="$bs" --iodepth=1 --numjobs=1
+fio_cmd=(fio --name=prof "${where[@]}" --size="${SIZE:-2g}" --rw="$rw" --bs="$bs" --iodepth=1 --numjobs=1
          --ioengine=io_uring --direct=1 --time_based --runtime="$SECS" --cpus_allowed=0
          --randrepeat=0 --norandommap --lat_percentiles=1 --output-format=json)
 
@@ -20,8 +20,9 @@ perf stat -a -e cycles,instructions,context-switches,cpu-migrations,page-faults 
   -e 'syscalls:sys_enter_read,syscalls:sys_enter_writev,syscalls:sys_enter_io_uring_enter' \
   -o "$out/perf-stat.txt" -- "${fio_cmd[@]}" --output="$out/fio-stat.json"
 
-# 2) call-graph sampling, all CPUs
+# 2) call-graph sampling, all CPUs (pipefail off: head closing the pipe is not an error)
 perf record -q -a -g -F 999 -o "$out/perf.data" -- "${fio_cmd[@]}" --output="$out/fio-record.json"
+set +o pipefail
 perf report -i "$out/perf.data" --no-children --sort comm --stdio 2>/dev/null | grep -v '^$' | head -40 > "$out/perf-report-comm.txt"
 perf report -i "$out/perf.data" --no-children --sort sym --stdio -g none 2>/dev/null | grep -v '^#' | grep -v '^$' | head -50 > "$out/perf-report-sym.txt"
 perf report -i "$out/perf.data" --no-children --sort comm,sym --stdio -g none 2>/dev/null | grep -v '^#' | grep -v '^$' | head -60 > "$out/perf-report-comm-sym.txt"

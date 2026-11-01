@@ -1,0 +1,40 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 12K of event 'cycles:P'
+# Event count (approx.): 57940201968
+#
+# Overhead  Command        
+# ........  ...............
+#
+    57.23%  fio            
+            |          
+            |--4.96%--entry_SYSRETQ_unsafe_stack
+            |          0x5ae15cd1f307
+            |          td_io_commit
+            |          td_io_queue
+            |          0x5ae15ccfdd35
+            |          0x5ae15cd00028
+            |          fio_backend
+            |          main
+            |          0x710f7642a1ca
+            |          __libc_start_main
+            |          _start
+            |          
+            |--1.74%--syscall_return_via_sysret
+            |          0x5ae15cd1f307
+            |          td_io_commit
+            |          td_io_queue
+            |          0x5ae15ccfdd35
+            |          0x5ae15cd00028
+            |          fio_backend
+            |          main
+            |          0x710f7642a1ca
+            |          __libc_start_main
+            |          _start
+            |          
+            |--1.43%--entry_SYSCALL_64
+            |          |          
+            |           --1.43%--0x5ae15cd1f307

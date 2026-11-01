@@ -1,0 +1,40 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 12K of event 'cycles:P'
+# Event count (approx.): 30491448739
+#
+# Overhead  Command        
+# ........  ...............
+#
+    95.35%  fio            
+            |          
+            |--15.43%--copy_from_brd
+            |          |          
+            |           --15.38%--brd_submit_bio
+            |                     __submit_bio
+            |                     __submit_bio_noacct
+            |                     submit_bio_noacct_nocheck
+            |                     submit_bio_noacct
+            |                     submit_bio
+            |                     iomap_dio_submit_bio
+            |                     iomap_dio_bio_iter
+            |                     __iomap_dio_rw
+            |                     iomap_dio_rw
+            |                     ext4_file_read_iter
+            |                     __io_read
+            |                     io_read
+            |                     io_issue_sqe
+            |                     io_submit_sqes
+            |                     __do_sys_io_uring_enter
+            |                     __x64_sys_io_uring_enter
+            |                     x64_sys_call
+            |                     do_syscall_64
+            |                     entry_SYSCALL_64_after_hwframe
+            |                     0x59d961d4c307
+            |                     td_io_commit
+            |                     td_io_queue
+            |                     0x59d961d2ad35
+            |                     0x59d961d2d028

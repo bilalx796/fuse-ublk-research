@@ -1,0 +1,16 @@
+# started on Sat Oct 31 20:48:12 2026
+
+
+ Performance counter stats for 'system wide':
+
+    21,772,326,766      cycles                                                                
+    15,504,870,511      instructions                     #    0.71  insn per cycle            
+           778,688      context-switches                                                      
+             4,358      cpu-migrations                                                        
+             7,516      page-faults                                                           
+           193,231      syscalls:sys_enter_read                                               
+           192,896      syscalls:sys_enter_writev                                             
+           385,784      syscalls:sys_enter_io_uring_enter                                      
+
+      10.368781244 seconds time elapsed
+

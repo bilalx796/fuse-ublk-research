@@ -15,6 +15,7 @@ log start
 "$M" B2-brd               /dev/ram0
 "$M" B3-ublk-loop-brd     /dev/ublkb1
 "$M" F0-ext4-brd          /mnt/bench/f0
+rm -f /mnt/bench/f0/fio.dat   # free ram1 for F1 (F1 data lives on the same ext4)
 "$M" F1-fuse-hp-ext4-brd  /mnt/bench/f1
 
 mkfs.ext4 -q -F -E lazy_itable_init=0,lazy_journal_init=0 /dev/ublkb1

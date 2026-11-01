@@ -1,0 +1,40 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 27K of event 'cycles:P'
+# Event count (approx.): 37039997772
+#
+# Overhead  Command        
+# ........  ...............
+#
+    35.89%  swapper        
+            |          
+            |--17.29%--intel_idle
+            |          |          
+            |           --17.25%--cpuidle_enter_state
+            |                     cpuidle_enter
+            |                     call_cpuidle
+            |                     cpuidle_idle_call
+            |                     do_idle
+            |                     cpu_startup_entry
+            |                     |          
+            |                     |--12.64%--start_secondary
+            |                     |          secondary_startup_64_no_verify
+            |                     |          
+            |                      --4.61%--rest_init
+            |                                arch_call_rest_init
+            |                                start_kernel
+            |                                x86_64_start_reservations
+            |                                x86_64_start_kernel
+            |                                secondary_startup_64_no_verify
+            |          
+            |--1.76%--psi_group_change
+            |          |          
+            |          |--0.81%--psi_task_change
+            |          |          enqueue_task
+            |          |          ttwu_do_activate
+            |          |          sched_ttwu_pending
+            |          |          __flush_smp_call_function_queue
+            |          |          flush_smp_call_function_queue
