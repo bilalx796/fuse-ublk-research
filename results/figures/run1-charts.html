@@ -62,8 +62,8 @@ footer{color:var(--muted);font-size:13px;display:grid;gap:6px}
 <main>
 <header>
   <div class="eyebrow">Run 1 · Emulab d430 · Linux 6.8 · 31 Oct 2026</div>
-  <h1>What does it cost to serve storage from userspace?</h1>
-  <p class="lede">We timed the same fio workloads on plain kernel storage, on ublk (a block device served by a userspace program), and on FUSE (a filesystem served by a userspace program). All storage is in RAM, so the differences come from the software layers, not from disk speed.</p>
+  <h1>How much overhead do FUSE and ublk add, and where does it come from?</h1>
+  <p class="lede">Measured against kernel-only storage on Linux 6.8, with RAM-backed devices so the interfaces, not the disk, set the cost. All tests use fio microbenchmarks; RocksDB put/get is not tested yet.</p>
   <div class="legend" aria-label="Setup families">
     <span><i style="background:var(--kernel)"></i>Kernel only (baseline)</span>
     <span><i style="background:var(--ublk)"></i>ublk</span>
