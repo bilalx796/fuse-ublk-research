@@ -1,0 +1,270 @@
+<title>FUSE vs ublk Overhead</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: single reading column; each finding = heading, chart, "why", table toggle */
+:root{
+  --bg:#fcfcfb;--panel:#f4f4f1;--fg:#0b0b0b;--fg2:#52514e;--muted:#7a7974;--grid:#e4e3df;--axis:#bdbcb6;
+  --kernel:#2a78d6;--ublk:#eb6834;--fuse:#1baf7a;--seqA:#86b6ef;--seqB:#1c5cab;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#1a1a19;--panel:#232321;--fg:#f0efec;--fg2:#c3c2b7;--muted:#97968e;--grid:#30302d;--axis:#4a4945;
+  --kernel:#3987e5;--ublk:#d95926;--fuse:#199e70;--seqA:#184f95;--seqB:#6da7ec;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1a1a19;--panel:#232321;--fg:#f0efec;--fg2:#c3c2b7;--muted:#97968e;--grid:#30302d;--axis:#4a4945;
+  --kernel:#3987e5;--ublk:#d95926;--fuse:#199e70;--seqA:#184f95;--seqB:#6da7ec;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.6}
+main{max-width:780px;margin:0 auto;padding-block:36px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:44px}
+header{display:grid;gap:10px}
+h1{font-size:28px;line-height:1.2;margin:0;text-wrap:balance;font-weight:600}
+h2{font-size:19px;margin:0;text-wrap:balance;font-weight:600}
+p{margin:0;max-width:66ch}
+.lede{color:var(--fg2)}
+.meta{font-family:var(--mono);font-size:12px;color:var(--muted)}
+section{display:grid;gap:14px;min-width:0}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--fg2)}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.chart{width:100%;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+.chart text{font-family:var(--sans);font-size:12px;fill:var(--fg2)}
+.chart .val{font-family:var(--mono);font-size:11.5px;fill:var(--fg)}
+.chart .tick{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+.chart .grp{font-size:12.5px;fill:var(--fg)}
+.chart .hit{fill:transparent;cursor:default}
+.chart .hit:hover+rect,.chart rect.on{opacity:.8}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.pair>div{min-width:0;display:grid;gap:4px}
+.pair h3{font-size:13.5px;margin:0;font-weight:600;color:var(--fg2)}
+@media (max-width:620px){.pair{grid-template-columns:1fr}}
+.pair .chart svg{min-width:300px}
+.why{background:var(--panel);border-radius:8px;padding:14px 16px;display:grid;gap:8px}
+.why b{font-weight:600}
+.why ul{margin:0;padding-left:18px;display:grid;gap:4px}
+details{font-size:13.5px}
+summary{cursor:pointer;color:var(--fg2)}
+summary:focus-visible{outline:2px solid var(--kernel);outline-offset:2px}
+.tbl{overflow-x:auto;margin-top:8px}
+table{border-collapse:collapse;font-variant-numeric:tabular-nums;min-width:100%}
+th,td{padding:5px 10px;border-bottom:1px solid var(--grid);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-weight:600;color:var(--fg2)}
+td{font-family:var(--mono);font-size:12.5px}
+#tip{position:fixed;pointer-events:none;background:var(--fg);color:var(--bg);font-size:12.5px;line-height:1.45;padding:7px 10px;border-radius:6px;max-width:260px;z-index:20}
+#tip b{font-weight:600}
+footer{color:var(--muted);font-size:13px;display:grid;gap:6px}
+</style>
+
+<main>
+<header>
+  <div class="eyebrow">Run 1 · Emulab d430 · Linux 6.8 · 31 Oct 2026</div>
+  <h1>What does it cost to serve storage from userspace?</h1>
+  <p class="lede">We timed the same fio workloads on plain kernel storage, on ublk (a block device served by a userspace program), and on FUSE (a filesystem served by a userspace program). All storage is in RAM, so the differences come from the software layers, not from disk speed.</p>
+  <div class="legend" aria-label="Setup families">
+    <span><i style="background:var(--kernel)"></i>Kernel only (baseline)</span>
+    <span><i style="background:var(--ublk)"></i>ublk</span>
+    <span><i style="background:var(--fuse)"></i>FUSE</span>
+  </div>
+  <p class="meta">Medians of 3 repeats × 20 s. Latency = total time per request. CPU = busy time on all CPUs (fio + server + kernel) per request.</p>
+</header>
+
+<section>
+  <div class="eyebrow">Finding 1 · What is the overhead</div>
+  <h2>One small read takes ~2–3 µs in the kernel, ~12–16 µs through ublk, ~38 µs through FUSE</h2>
+  <div class="chart" id="c1"></div>
+  <div class="why">
+    <p><b>Why this probably happens</b></p>
+    <ul>
+      <li>With the kernel only, the read is finished inside one system call on one CPU. Nothing has to wake up.</li>
+      <li>With ublk or FUSE, the request is handed to a separate program. That program must wake up, do the work, and reply, and then fio must wake up again. We counted about <b>4 context switches per request</b> for both, versus 0 for the kernel.</li>
+      <li>FUSE does more work per request: the daemon reads the request from <code>/dev/fuse</code>, does a second, real read into ext4, then writes the reply back. ublk's null target does no second I/O, and its loop target uses io_uring to batch the reply with fetching the next request.</li>
+    </ul>
+  </div>
+  <details><summary>Show as table</summary><div class="tbl" id="t1"></div></details>
+</section>
+
+<section>
+  <div class="eyebrow">Finding 1b · Cost of each layer</div>
+  <h2>FUSE adds about 3× more time and CPU per request than ublk</h2>
+  <div class="pair">
+    <div><h3>Extra latency per 4 KB read (µs)</h3><div class="chart" id="c2a"></div></div>
+    <div><h3>Extra CPU per 4 KB read (µs)</h3><div class="chart" id="c2b"></div></div>
+  </div>
+  <div class="why">
+    <p><b>How to read it.</b> Each bar is one setup minus its matching kernel baseline. "ublk interface" (null target minus null_blk) is the cleanest measure of ublk itself. The loop and FUSE bars also include the server's own second I/O into the RAM disk.</p>
+    <p><b>Why CPU is higher than latency for FUSE.</b> Several CPUs work on each request (fio, the FUSE daemon thread, kernel wake-up work), so the total CPU time per request can be larger than the time the request takes from start to finish.</p>
+  </div>
+  <details><summary>Show as table</summary><div class="tbl" id="t2"></div></details>
+</section>
+
+<section>
+  <div class="eyebrow">Finding 2 · Where the FUSE time goes</div>
+  <h2>A surprising share of FUSE's cost is zeroing memory, not moving data</h2>
+  <div class="legend">
+    <span><i style="background:var(--fuse)"></i>Splice on (default)</span>
+    <span><i style="background:var(--fuse);opacity:.5"></i>Splice off (--nosplice)</span>
+  </div>
+  <p class="meta">CPU µs per request, reads only (direct writes fail with splice off).</p>
+  <div class="chart" id="c5"></div>
+  <div class="why">
+    <p><b>What we saw.</b> In the FUSE daemon's profile, the top kernel function was <code>clear_page_erms</code> (filling fresh memory pages with zeros), above the actual data copy. With splice turned off (<code>--nosplice</code>) it disappeared, and a small read got ~20% cheaper in CPU.</p>
+    <p><b>Likely explanation.</b> libfuse's splice path moves data through a kernel pipe and seems to set up fresh pages for each request. For small requests that setup costs more than the copy it saves. For large requests (128 KB) the copy it avoids is big, so turning splice off made large reads up to 10× slower. Splice off also broke direct writes: the unaligned userspace buffer is rejected by ext4.</p>
+  </div>
+  <details><summary>Show as table</summary><div class="tbl" id="t5"></div></details>
+</section>
+
+<section>
+  <div class="eyebrow">Finding 3 · When it matters</div>
+  <h2>The slowdown is worst for small requests sent one at a time</h2>
+  <div class="legend">
+    <span><i style="background:var(--ublk)"></i>ublk interface (vs null_blk)</span>
+    <span><i style="background:var(--ublk);opacity:.55"></i>ext4 on ublk loop (vs ext4)</span>
+    <span><i style="background:var(--fuse)"></i>FUSE over ext4 (vs ext4)</span>
+  </div>
+  <div class="chart" id="c3"></div>
+  <div class="why">
+    <p><b>Why.</b> With one request at a time (qd1), every request pays the full round trip to userspace and nothing overlaps, so throughput drops to 5–20% of the kernel's. With 8 requests in flight (qd8) the userspace server is busy all the time and the wake-up costs overlap, so throughput gets close to the kernel's.</p>
+    <p><b>Bars above 100%.</b> At 128 KB with 8 in flight, FUSE and ublk beat their baselines. This is a side effect of the test, not real speed: with one fio job, the kernel-only path copies every byte on fio's single CPU, while FUSE and ublk spread the copying across 4 server threads on 4 CPUs. They still use more total CPU.</p>
+  </div>
+  <details><summary>Show as table</summary><div class="tbl" id="t3"></div></details>
+</section>
+
+<section>
+  <div class="eyebrow">Finding 3b · Hidden cost</div>
+  <h2>Sending more requests at once hides the delay, but not the CPU cost</h2>
+  <div class="legend">
+    <span><i style="background:var(--seqA)"></i>1 request in flight (qd1)</span>
+    <span><i style="background:var(--seqB)"></i>8 requests in flight (qd8)</span>
+  </div>
+  <div class="chart" id="c4"></div>
+  <div class="why">
+    <p><b>Why.</b> At qd8 the server handles several requests per wake-up, so fewer context switches are paid per request and the extra CPU per request falls (FUSE 45 → 12 µs, ublk 9 → 2 µs). But it doesn't reach zero: each request still has to be parsed, copied and answered by the server. On a busy machine that CPU is taken from applications, even when the benchmark's throughput looks fine.</p>
+  </div>
+  <details><summary>Show as table</summary><div class="tbl" id="t4"></div></details>
+</section>
+
+<footer>
+  <p>Caveats: one node, one boot, 3 short repeats. The RAM-disk baseline (brd) varied up to 43% between repeats at 4 KB. ext4-on-ublk writes were unexpectedly slow and are not yet explained. Kernel 6.8 has no FUSE passthrough, no FUSE-over-io_uring and no ublk zero-copy.</p>
+  <p>Source data, scripts and full tables: github.com/bilalx796/fuse-ublk-research (results/summary.csv, notes/2026-10-31-run1-findings.md).</p>
+</footer>
+</main>
+<div id="tip" hidden></div>
+
+<script>
+const D = {"B0-null_blk":{"randread-4k-qd1-j1":{"iops":459908.96,"lat_p50_us":1.93,"lat_p99_us":2.06,"cpu_us_per_io":2.45,"ctx_per_io":0.0,"iops_spread_pct":3.6},"randread-4k-qd1-j4":{"iops":1625605.47,"lat_p50_us":2.19,"lat_p99_us":2.42,"cpu_us_per_io":2.57,"ctx_per_io":0.0,"iops_spread_pct":4.0},"randread-4k-qd8-j1":{"iops":405958.35,"lat_p50_us":19.33,"lat_p99_us":21.89,"cpu_us_per_io":2.64,"ctx_per_io":0.0,"iops_spread_pct":16.3},"randwrite-4k-qd1-j1":{"iops":447470.33,"lat_p50_us":1.96,"lat_p99_us":2.04,"cpu_us_per_io":2.34,"ctx_per_io":0.0,"iops_spread_pct":2.2},"randwrite-4k-qd1-j4":{"iops":1589191.89,"lat_p50_us":2.26,"lat_p99_us":2.45,"cpu_us_per_io":2.57,"ctx_per_io":0.0,"iops_spread_pct":12.7},"randwrite-4k-qd8-j1":{"iops":447694.36,"lat_p50_us":17.54,"lat_p99_us":20.61,"cpu_us_per_io":2.3,"ctx_per_io":0.0,"iops_spread_pct":3.6},"read-128k-qd1-j1":{"iops":67043.7,"lat_p50_us":14.4,"lat_p99_us":17.02,"cpu_us_per_io":15.6,"ctx_per_io":2.0,"iops_spread_pct":0.8},"read-128k-qd8-j1":{"iops":85053.85,"lat_p50_us":95.74,"lat_p99_us":104.96,"cpu_us_per_io":12.18,"ctx_per_io":0.37,"iops_spread_pct":3.1},"write-128k-qd1-j1":{"iops":67088.95,"lat_p50_us":14.27,"lat_p99_us":17.28,"cpu_us_per_io":15.42,"ctx_per_io":2.0,"iops_spread_pct":2.2},"write-128k-qd8-j1":{"iops":81429.68,"lat_p50_us":107.01,"lat_p99_us":121.34,"cpu_us_per_io":12.82,"ctx_per_io":0.66,"iops_spread_pct":1.4}},"B1-ublk-null":{"randread-4k-qd1-j1":{"iops":80038.15,"lat_p50_us":11.97,"lat_p99_us":14.4,"cpu_us_per_io":11.63,"ctx_per_io":4.02,"iops_spread_pct":7.4},"randread-4k-qd1-j4":{"iops":414792.51,"lat_p50_us":9.02,"lat_p99_us":11.2,"cpu_us_per_io":7.04,"ctx_per_io":1.98,"iops_spread_pct":6.3},"randread-4k-qd8-j1":{"iops":423328.13,"lat_p50_us":18.56,"lat_p99_us":28.03,"cpu_us_per_io":4.79,"ctx_per_io":0.01,"iops_spread_pct":4.4},"randwrite-4k-qd1-j1":{"iops":82074.0,"lat_p50_us":11.71,"lat_p99_us":14.02,"cpu_us_per_io":11.31,"ctx_per_io":4.02,"iops_spread_pct":20.7},"randwrite-4k-qd1-j4":{"iops":407758.11,"lat_p50_us":8.9,"lat_p99_us":14.66,"cpu_us_per_io":7.24,"ctx_per_io":2.03,"iops_spread_pct":11.6},"randwrite-4k-qd8-j1":{"iops":378578.77,"lat_p50_us":20.86,"lat_p99_us":25.22,"cpu_us_per_io":5.01,"ctx_per_io":0.23,"iops_spread_pct":11.1},"read-128k-qd1-j1":{"iops":23565.22,"lat_p50_us":41.22,"lat_p99_us":46.85,"cpu_us_per_io":45.93,"ctx_per_io":4.04,"iops_spread_pct":29.8},"read-128k-qd8-j1":{"iops":69303.24,"lat_p50_us":114.18,"lat_p99_us":126.46,"cpu_us_per_io":23.37,"ctx_per_io":1.93,"iops_spread_pct":23.9},"write-128k-qd1-j1":{"iops":24074.45,"lat_p50_us":40.19,"lat_p99_us":46.85,"cpu_us_per_io":43.83,"ctx_per_io":4.1,"iops_spread_pct":7.5},"write-128k-qd8-j1":{"iops":76090.7,"lat_p50_us":112.13,"lat_p99_us":136.19,"cpu_us_per_io":22.12,"ctx_per_io":0.23,"iops_spread_pct":0.1}},"B2-brd":{"randread-4k-qd1-j1":{"iops":422031.2,"lat_p50_us":2.13,"lat_p99_us":2.61,"cpu_us_per_io":2.49,"ctx_per_io":0.0,"iops_spread_pct":28.5},"randread-4k-qd1-j4":{"iops":1532164.99,"lat_p50_us":2.35,"lat_p99_us":2.74,"cpu_us_per_io":2.64,"ctx_per_io":0.0,"iops_spread_pct":28.9},"randread-4k-qd8-j1":{"iops":403399.53,"lat_p50_us":19.58,"lat_p99_us":22.66,"cpu_us_per_io":2.57,"ctx_per_io":0.0,"iops_spread_pct":43.4},"randwrite-4k-qd1-j1":{"iops":358358.33,"lat_p50_us":2.54,"lat_p99_us":3.02,"cpu_us_per_io":2.9,"ctx_per_io":0.0,"iops_spread_pct":10.7},"randwrite-4k-qd1-j4":{"iops":1318494.93,"lat_p50_us":2.74,"lat_p99_us":3.18,"cpu_us_per_io":3.07,"ctx_per_io":0.0,"iops_spread_pct":2.8},"randwrite-4k-qd8-j1":{"iops":324296.34,"lat_p50_us":24.19,"lat_p99_us":33.54,"cpu_us_per_io":3.21,"ctx_per_io":0.0,"iops_spread_pct":8.8},"read-128k-qd1-j1":{"iops":38202.99,"lat_p50_us":25.47,"lat_p99_us":34.56,"cpu_us_per_io":27.14,"ctx_per_io":0.01,"iops_spread_pct":0.3},"read-128k-qd8-j1":{"iops":37150.14,"lat_p50_us":214.02,"lat_p99_us":224.26,"cpu_us_per_io":28.02,"ctx_per_io":0.01,"iops_spread_pct":1.8},"write-128k-qd1-j1":{"iops":27109.79,"lat_p50_us":36.1,"lat_p99_us":45.31,"cpu_us_per_io":38.51,"ctx_per_io":0.01,"iops_spread_pct":0.6},"write-128k-qd8-j1":{"iops":26293.83,"lat_p50_us":301.06,"lat_p99_us":321.54,"cpu_us_per_io":39.38,"ctx_per_io":0.01,"iops_spread_pct":0.7}},"B3-ublk-loop-brd":{"randread-4k-qd1-j1":{"iops":61272.54,"lat_p50_us":15.55,"lat_p99_us":18.56,"cpu_us_per_io":15.27,"ctx_per_io":3.93,"iops_spread_pct":1.6},"randread-4k-qd1-j4":{"iops":213366.53,"lat_p50_us":18.05,"lat_p99_us":21.63,"cpu_us_per_io":11.21,"ctx_per_io":2.04,"iops_spread_pct":1.1},"randread-4k-qd8-j1":{"iops":300525.37,"lat_p50_us":26.24,"lat_p99_us":34.56,"cpu_us_per_io":6.08,"ctx_per_io":0.42,"iops_spread_pct":1.5},"randwrite-4k-qd1-j1":{"iops":59505.88,"lat_p50_us":16.19,"lat_p99_us":19.33,"cpu_us_per_io":15.7,"ctx_per_io":3.92,"iops_spread_pct":3.2},"randwrite-4k-qd1-j4":{"iops":143910.15,"lat_p50_us":26.5,"lat_p99_us":32.13,"cpu_us_per_io":14.68,"ctx_per_io":2.52,"iops_spread_pct":2.1},"randwrite-4k-qd8-j1":{"iops":276558.27,"lat_p50_us":28.54,"lat_p99_us":38.14,"cpu_us_per_io":6.51,"ctx_per_io":0.34,"iops_spread_pct":0.4},"read-128k-qd1-j1":{"iops":13109.09,"lat_p50_us":75.26,"lat_p99_us":81.41,"cpu_us_per_io":80.61,"ctx_per_io":4.02,"iops_spread_pct":1.2},"read-128k-qd8-j1":{"iops":26034.1,"lat_p50_us":305.15,"lat_p99_us":358.4,"cpu_us_per_io":55.26,"ctx_per_io":0.54,"iops_spread_pct":0.2},"write-128k-qd1-j1":{"iops":10659.57,"lat_p50_us":92.67,"lat_p99_us":100.86,"cpu_us_per_io":98.38,"ctx_per_io":4.07,"iops_spread_pct":0.5},"write-128k-qd8-j1":{"iops":16205.44,"lat_p50_us":505.86,"lat_p99_us":577.54,"cpu_us_per_io":80.15,"ctx_per_io":0.62,"iops_spread_pct":1.4}},"F0-ext4-brd":{"randread-4k-qd1-j1":{"iops":341288.24,"lat_p50_us":2.64,"lat_p99_us":3.22,"cpu_us_per_io":3.03,"ctx_per_io":0.0,"iops_spread_pct":1.2},"randread-4k-qd1-j4":{"iops":1185357.18,"lat_p50_us":3.06,"lat_p99_us":3.7,"cpu_us_per_io":3.44,"ctx_per_io":0.0,"iops_spread_pct":4.3},"randread-4k-qd8-j1":{"iops":333298.68,"lat_p50_us":23.68,"lat_p99_us":26.75,"cpu_us_per_io":3.12,"ctx_per_io":0.0,"iops_spread_pct":3.1},"randwrite-4k-qd1-j1":{"iops":286826.01,"lat_p50_us":3.15,"lat_p99_us":3.73,"cpu_us_per_io":3.6,"ctx_per_io":0.0,"iops_spread_pct":3.7},"randwrite-4k-qd1-j4":{"iops":1013345.43,"lat_p50_us":3.63,"lat_p99_us":4.32,"cpu_us_per_io":3.99,"ctx_per_io":0.0,"iops_spread_pct":2.1},"randwrite-4k-qd8-j1":{"iops":289118.04,"lat_p50_us":27.26,"lat_p99_us":33.02,"cpu_us_per_io":3.58,"ctx_per_io":0.0,"iops_spread_pct":4.8},"read-128k-qd1-j1":{"iops":37361.43,"lat_p50_us":25.73,"lat_p99_us":36.1,"cpu_us_per_io":28.28,"ctx_per_io":0.01,"iops_spread_pct":1.6},"read-128k-qd8-j1":{"iops":36351.73,"lat_p50_us":211.97,"lat_p99_us":292.86,"cpu_us_per_io":28.54,"ctx_per_io":0.01,"iops_spread_pct":0.4},"write-128k-qd1-j1":{"iops":27474.28,"lat_p50_us":35.07,"lat_p99_us":46.85,"cpu_us_per_io":38.09,"ctx_per_io":0.01,"iops_spread_pct":1.2},"write-128k-qd8-j1":{"iops":26694.47,"lat_p50_us":292.86,"lat_p99_us":387.07,"cpu_us_per_io":38.83,"ctx_per_io":0.01,"iops_spread_pct":0.8}},"F1-fuse-hp-ext4-brd":{"randread-4k-qd1-j1":{"iops":22304.44,"lat_p50_us":38.14,"lat_p99_us":108.03,"cpu_us_per_io":47.68,"ctx_per_io":4.13,"iops_spread_pct":21.1},"randread-4k-qd1-j4":{"iops":234332.58,"lat_p50_us":15.42,"lat_p99_us":27.52,"cpu_us_per_io":21.0,"ctx_per_io":3.61,"iops_spread_pct":6.7},"randread-4k-qd8-j1":{"iops":318610.77,"lat_p50_us":23.42,"lat_p99_us":37.63,"cpu_us_per_io":15.18,"ctx_per_io":0.66,"iops_spread_pct":6.2},"randwrite-4k-qd1-j1":{"iops":16465.03,"lat_p50_us":44.8,"lat_p99_us":125.44,"cpu_us_per_io":58.47,"ctx_per_io":4.14,"iops_spread_pct":6.1},"randwrite-4k-qd1-j4":{"iops":213830.51,"lat_p50_us":17.28,"lat_p99_us":24.96,"cpu_us_per_io":22.59,"ctx_per_io":3.7,"iops_spread_pct":6.4},"randwrite-4k-qd8-j1":{"iops":275049.1,"lat_p50_us":30.34,"lat_p99_us":40.19,"cpu_us_per_io":17.38,"ctx_per_io":0.88,"iops_spread_pct":8.1},"read-128k-qd1-j1":{"iops":6049.2,"lat_p50_us":144.38,"lat_p99_us":224.26,"cpu_us_per_io":177.3,"ctx_per_io":4.17,"iops_spread_pct":0.2},"read-128k-qd8-j1":{"iops":71210.49,"lat_p50_us":70.14,"lat_p99_us":585.73,"cpu_us_per_io":63.38,"ctx_per_io":1.4,"iops_spread_pct":0.5},"write-128k-qd1-j1":{"iops":4322.18,"lat_p50_us":232.45,"lat_p99_us":264.19,"cpu_us_per_io":217.68,"ctx_per_io":4.15,"iops_spread_pct":1.1},"write-128k-qd8-j1":{"iops":61956.0,"lat_p50_us":88.58,"lat_p99_us":1155.07,"cpu_us_per_io":75.09,"ctx_per_io":1.42,"iops_spread_pct":0.2}},"F1n-fuse-hp-nosplice-ext4-brd":{"randread-4k-qd1-j1":{"iops":24322.23,"lat_p50_us":34.05,"lat_p99_us":99.84,"cpu_us_per_io":38.42,"ctx_per_io":4.02,"iops_spread_pct":35.2},"randread-4k-qd1-j4":{"iops":202101.64,"lat_p50_us":19.07,"lat_p99_us":22.91,"cpu_us_per_io":20.08,"ctx_per_io":3.97,"iops_spread_pct":1.7},"randread-4k-qd8-j1":{"iops":254465.08,"lat_p50_us":30.85,"lat_p99_us":38.14,"cpu_us_per_io":16.36,"ctx_per_io":1.64,"iops_spread_pct":8.4},"read-128k-qd1-j1":{"iops":3529.72,"lat_p50_us":280.58,"lat_p99_us":354.3,"cpu_us_per_io":326.77,"ctx_per_io":4.37,"iops_spread_pct":0.5},"read-128k-qd8-j1":{"iops":6201.63,"lat_p50_us":1236.99,"lat_p99_us":4751.36,"cpu_us_per_io":351.6,"ctx_per_io":6.53,"iops_spread_pct":0.3}},"F2-ext4-ublk-loop-brd":{"randread-4k-qd1-j1":{"iops":58611.07,"lat_p50_us":16.51,"lat_p99_us":19.84,"cpu_us_per_io":16.09,"ctx_per_io":3.91,"iops_spread_pct":3.7},"randread-4k-qd1-j4":{"iops":212220.84,"lat_p50_us":17.79,"lat_p99_us":22.91,"cpu_us_per_io":11.6,"ctx_per_io":2.07,"iops_spread_pct":0.8},"randread-4k-qd8-j1":{"iops":297285.54,"lat_p50_us":25.98,"lat_p99_us":33.02,"cpu_us_per_io":6.51,"ctx_per_io":0.19,"iops_spread_pct":2.1},"randwrite-4k-qd1-j1":{"iops":41091.1,"lat_p50_us":23.17,"lat_p99_us":28.29,"cpu_us_per_io":22.5,"ctx_per_io":5.0,"iops_spread_pct":1.9},"randwrite-4k-qd1-j4":{"iops":92369.38,"lat_p50_us":41.73,"lat_p99_us":48.38,"cpu_us_per_io":21.6,"ctx_per_io":2.73,"iops_spread_pct":0.8},"randwrite-4k-qd8-j1":{"iops":141388.88,"lat_p50_us":55.55,"lat_p99_us":63.23,"cpu_us_per_io":10.87,"ctx_per_io":0.62,"iops_spread_pct":2.1},"read-128k-qd1-j1":{"iops":12707.26,"lat_p50_us":76.29,"lat_p99_us":83.46,"cpu_us_per_io":82.53,"ctx_per_io":4.0,"iops_spread_pct":1.5},"read-128k-qd8-j1":{"iops":25909.35,"lat_p50_us":325.63,"lat_p99_us":358.4,"cpu_us_per_io":55.86,"ctx_per_io":0.64,"iops_spread_pct":0.1},"write-128k-qd1-j1":{"iops":9364.98,"lat_p50_us":104.96,"lat_p99_us":114.18,"cpu_us_per_io":110.57,"ctx_per_io":5.09,"iops_spread_pct":0.7},"write-128k-qd8-j1":{"iops":13662.92,"lat_p50_us":585.73,"lat_p99_us":618.5,"cpu_us_per_io":88.0,"ctx_per_io":0.65,"iops_spread_pct":0.1}}};
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const NS = "http://www.w3.org/2000/svg";
+const el = (t, a = {}, txt) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (txt != null) e.textContent = txt; return e; };
+const fmt = (v, d = 1) => v >= 1000 ? Math.round(v).toLocaleString("en-US") : v.toFixed(d);
+
+const tip = document.getElementById("tip");
+function showTip(ev, html) { tip.innerHTML = html; tip.hidden = false; moveTip(ev); }
+function moveTip(ev) { const x = Math.min(ev.clientX + 14, innerWidth - tip.offsetWidth - 8); tip.style.left = x + "px"; tip.style.top = (ev.clientY + 14) + "px"; }
+function hideTip() { tip.hidden = true; }
+
+// Horizontal (grouped) bar chart. rows: [{label, bars:[{v, color, opacity, tip, show}]}]
+function hbar(id, rows, opt = {}) {
+  const host = document.getElementById(id);
+  const W = opt.width || 720, labW = opt.labW ?? 170, padR = 56, barH = opt.barH || 14, gap = 2, rowGap = opt.rowGap || 14;
+  const nb = Math.max(...rows.map(r => r.bars.length));
+  const rowH = nb * barH + (nb - 1) * gap;
+  const top = 6, axisH = 24, H = top + rows.length * rowH + (rows.length - 1) * rowGap + axisH;
+  const max = opt.max || Math.max(...rows.flatMap(r => r.bars.map(b => b.v))) * 1.05;
+  const plotW = W - labW - padR, x = v => labW + Math.max(0, v) / max * plotW;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": opt.aria || "" });
+  const ticks = opt.ticks || niceTicks(max);
+  ticks.forEach(t => {
+    svg.append(el("line", { x1: x(t), x2: x(t), y1: top - 4, y2: H - axisH + 2, stroke: css("--grid"), "stroke-width": 1 }));
+    svg.append(el("text", { x: x(t), y: H - 6, "text-anchor": "middle", class: "tick" }, t + (opt.tickUnit || "")));
+  });
+  if (opt.ref != null) svg.append(el("line", { x1: x(opt.ref), x2: x(opt.ref), y1: top - 4, y2: H - axisH + 2, stroke: css("--fg2"), "stroke-width": 1.5, "stroke-dasharray": "4 3" }));
+  rows.forEach((r, i) => {
+    const y0 = top + i * (rowH + rowGap);
+    svg.append(el("text", { x: labW - 10, y: y0 + rowH / 2 + 4, "text-anchor": "end", class: "grp" }, r.label));
+    r.bars.forEach((b, j) => {
+      const y = y0 + j * (barH + gap), w = Math.max(2, x(b.v) - labW);
+      const g = el("g");
+      const rect = el("path", { d: roundRight(labW, y, w, barH, 4), fill: b.color, opacity: b.opacity ?? 1 });
+      const hit = el("rect", { x: labW, y: y - 1, width: plotW, height: barH + 2, class: "hit" });
+      hit.addEventListener("mouseenter", ev => { rect.setAttribute("opacity", (b.opacity ?? 1) * .75); showTip(ev, b.tip); });
+      hit.addEventListener("mousemove", moveTip);
+      hit.addEventListener("mouseleave", () => { rect.setAttribute("opacity", b.opacity ?? 1); hideTip(); });
+      g.append(rect);
+      if (b.show !== false) g.append(el("text", { x: labW + w + 6, y: y + barH / 2 + 4, class: "val" }, b.label ?? (fmt(b.v) + (opt.unit || ""))));
+      g.append(hit);
+      svg.append(g);
+    });
+  });
+  svg.append(el("line", { x1: labW, x2: labW, y1: top - 4, y2: H - axisH + 2, stroke: css("--axis"), "stroke-width": 1 }));
+  host.replaceChildren(svg);
+}
+function roundRight(x, y, w, h, r) { r = Math.min(r, w / 2, h / 2); return `M${x},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h - r}Q${x + w},${y + h} ${x + w - r},${y + h}H${x}Z`; }
+function niceTicks(max) { const raw = max / 4, p = 10 ** Math.floor(Math.log10(raw)), s = [1, 2, 2.5, 5, 10].find(m => m * p >= raw) * p; const t = []; for (let v = 0; v <= max + 1e-9; v += s) t.push(+v.toFixed(6)); return t; }
+function table(id, head, rows) {
+  const t = document.createElement("table");
+  t.innerHTML = "<thead><tr>" + head.map(h => `<th>${h}</th>`).join("") + "</tr></thead><tbody>" + rows.map(r => "<tr>" + r.map(c => `<td>${c}</td>`).join("") + "</tr>").join("") + "</tbody>";
+  document.getElementById(id).replaceChildren(t);
+}
+
+const S = {
+  "B0-null_blk": ["null_blk", "kernel"], "B2-brd": ["RAM disk (brd)", "kernel"], "F0-ext4-brd": ["ext4 on RAM disk", "kernel"],
+  "B1-ublk-null": ["ublk null", "ublk"], "B3-ublk-loop-brd": ["ublk loop → RAM disk", "ublk"], "F2-ext4-ublk-loop-brd": ["ext4 on ublk loop", "ublk"],
+  "F1-fuse-hp-ext4-brd": ["FUSE → ext4", "fuse"]
+};
+const C = "randread-4k-qd1-j1";
+const g = (s, c, k) => D[s][c][k];
+
+function render() {
+  const col = f => css("--" + f);
+  // 1: latency per setup
+  const order = ["B0-null_blk", "B2-brd", "F0-ext4-brd", "B1-ublk-null", "B3-ublk-loop-brd", "F2-ext4-ublk-loop-brd", "F1-fuse-hp-ext4-brd"];
+  hbar("c1", order.map(s => ({ label: S[s][0], bars: [{ v: g(s, C, "lat_p50_us"), color: col(S[s][1]), unit: " µs",
+    tip: `<b>${S[s][0]}</b><br>p50 ${fmt(g(s, C, "lat_p50_us"))} µs · p99 ${fmt(g(s, C, "lat_p99_us"))} µs<br>${fmt(g(s, C, "iops"))} IOPS<br>${fmt(g(s, C, "ctx_per_io"), 1)} context switches / request` }] })),
+    { unit: " µs", tickUnit: "", aria: "Median latency of a 4 KB random read per setup" });
+  table("t1", ["Setup", "p50 µs", "p99 µs", "IOPS", "CPU µs / req", "ctx sw / req"], order.map(s => [S[s][0], fmt(g(s, C, "lat_p50_us")), fmt(g(s, C, "lat_p99_us")), fmt(g(s, C, "iops")), fmt(g(s, C, "cpu_us_per_io"), 2), fmt(g(s, C, "ctx_per_io"), 2)]));
+
+  // 2: deltas
+  const pairs = [["ublk interface", "B1-ublk-null", "B0-null_blk", "ublk"], ["ublk loop", "B3-ublk-loop-brd", "B2-brd", "ublk"], ["FUSE over ext4", "F1-fuse-hp-ext4-brd", "F0-ext4-brd", "fuse"]];
+  const dl = p => g(p[1], C, "lat_p50_us") - g(p[2], C, "lat_p50_us"), dc = p => g(p[1], C, "cpu_us_per_io") - g(p[2], C, "cpu_us_per_io");
+  const mx = Math.max(...pairs.map(dc)) * 1.08;
+  hbar("c2a", pairs.map(p => ({ label: p[0], bars: [{ v: dl(p), color: col(p[3]), label: "+" + fmt(dl(p)), tip: `<b>${p[0]}</b><br>+${fmt(dl(p))} µs median latency` }] })), { width: 420, labW: 116, max: mx, barH: 18, aria: "Extra latency per layer" });
+  hbar("c2b", pairs.map(p => ({ label: p[0], bars: [{ v: dc(p), color: col(p[3]), label: "+" + fmt(dc(p)), tip: `<b>${p[0]}</b><br>+${fmt(dc(p))} µs CPU per request` }] })), { width: 420, labW: 116, max: mx, barH: 18, aria: "Extra CPU per layer" });
+  table("t2", ["Layer", "Compared with", "+ latency µs", "+ CPU µs"], pairs.map(p => [p[0], S[p[2]][0], fmt(dl(p)), fmt(dc(p))]));
+
+  // 3: throughput as % of baseline across configs
+  const cfgs = ["randread-4k-qd1-j1", "randwrite-4k-qd1-j1", "randread-4k-qd1-j4", "randwrite-4k-qd1-j4", "randread-4k-qd8-j1", "randwrite-4k-qd8-j1", "read-128k-qd1-j1", "write-128k-qd1-j1", "read-128k-qd8-j1", "write-128k-qd8-j1"];
+  const nice = c => { const [rw, bs, qd, j] = c.split("-"); return `${rw.replace("rand", "rand ")} ${bs.toUpperCase().replace("K", " KB")} · ${qd}${j === "j4" ? " ×4 jobs" : ""}`; };
+  const ser = [["ublk interface", "B1-ublk-null", "B0-null_blk", col("ublk"), 1], ["ext4 on ublk loop", "F2-ext4-ublk-loop-brd", "F0-ext4-brd", col("ublk"), .55], ["FUSE over ext4", "F1-fuse-hp-ext4-brd", "F0-ext4-brd", col("fuse"), 1]];
+  const pct = (s, c) => g(s[1], c, "iops") / g(s[2], c, "iops") * 100;
+  hbar("c3", cfgs.map(c => ({ label: nice(c), bars: ser.map(s => ({ v: pct(s, c), color: s[3], opacity: s[4], label: Math.round(pct(s, c)) + "%",
+    tip: `<b>${s[0]}</b> · ${nice(c)}<br>${Math.round(pct(s, c))}% of baseline throughput<br>${fmt(g(s[1], c, "iops"))} vs ${fmt(g(s[2], c, "iops"))} IOPS` })) })),
+    { labW: 190, barH: 9, rowGap: 12, ref: 100, ticks: [0, 50, 100, 150, 200, 250], max: 255, tickUnit: "%", aria: "Throughput as percent of kernel baseline" });
+  table("t3", ["Workload", ...ser.map(s => s[0] + " %")], cfgs.map(c => [nice(c), ...ser.map(s => Math.round(pct(s, c)))]));
+
+  // 4: extra CPU at qd1 vs qd8
+  const p4 = [["ublk interface", "B1-ublk-null", "B0-null_blk"], ["ext4 on ublk loop", "F2-ext4-ublk-loop-brd", "F0-ext4-brd"], ["FUSE over ext4", "F1-fuse-hp-ext4-brd", "F0-ext4-brd"]];
+  const ex = (p, c) => g(p[1], c, "cpu_us_per_io") - g(p[2], c, "cpu_us_per_io");
+  const Q1 = "randread-4k-qd1-j1", Q8 = "randread-4k-qd8-j1";
+  hbar("c4", p4.map(p => ({ label: p[0], bars: [
+    { v: ex(p, Q1), color: col("seqA"), label: "+" + fmt(ex(p, Q1)) + " µs", tip: `<b>${p[0]}</b> · qd1<br>+${fmt(ex(p, Q1))} µs CPU per 4 KB read` },
+    { v: ex(p, Q8), color: col("seqB"), label: "+" + fmt(ex(p, Q8)) + " µs", tip: `<b>${p[0]}</b> · qd8<br>+${fmt(ex(p, Q8))} µs CPU per 4 KB read` }] })),
+    { labW: 150, barH: 16, aria: "Extra CPU per request at queue depth 1 and 8" });
+  table("t4", ["Layer", "+CPU µs at qd1", "+CPU µs at qd8", "IOPS % of baseline at qd8"], p4.map(p => [p[0], fmt(ex(p, Q1)), fmt(ex(p, Q8)), Math.round(g(p[1], Q8, "iops") / g(p[2], Q8, "iops") * 100)]));
+
+  // 5: splice vs nosplice CPU per I/O (reads)
+  const rc = ["randread-4k-qd1-j1", "randread-4k-qd1-j4", "randread-4k-qd8-j1", "read-128k-qd1-j1", "read-128k-qd8-j1"];
+  const A = "F1-fuse-hp-ext4-brd", B = "F1n-fuse-hp-nosplice-ext4-brd";
+  hbar("c5", rc.map(c => ({ label: nice(c), bars: [
+    { v: g(A, c, "cpu_us_per_io"), color: col("fuse"), label: fmt(g(A, c, "cpu_us_per_io")) + " µs", tip: `<b>FUSE, splice on (default)</b> · ${nice(c)}<br>${fmt(g(A, c, "cpu_us_per_io"))} µs CPU / request<br>p50 ${fmt(g(A, c, "lat_p50_us"))} µs · ${fmt(g(A, c, "iops"))} IOPS` },
+    { v: g(B, c, "cpu_us_per_io"), color: col("fuse"), opacity: .5, label: fmt(g(B, c, "cpu_us_per_io")) + " µs", tip: `<b>FUSE, splice off</b> · ${nice(c)}<br>${fmt(g(B, c, "cpu_us_per_io"))} µs CPU / request<br>p50 ${fmt(g(B, c, "lat_p50_us"))} µs · ${fmt(g(B, c, "iops"))} IOPS` }] })),
+    { labW: 190, barH: 11, rowGap: 12, aria: "FUSE CPU per request with splice on and off" });
+  table("t5", ["Read workload", "splice on: CPU µs", "splice off: CPU µs", "splice on: p50 µs", "splice off: p50 µs"], rc.map(c => [nice(c), fmt(g(A, c, "cpu_us_per_io")), fmt(g(B, c, "cpu_us_per_io")), fmt(g(A, c, "lat_p50_us")), fmt(g(B, c, "lat_p50_us"))]));
+}
+render();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+</script>
