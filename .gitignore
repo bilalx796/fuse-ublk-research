@@ -1,0 +1,6 @@
+# third-party sources/builds (cloned separately, not tracked)
+third_party/
+build/
+*.o
+__pycache__/
+.venv/
