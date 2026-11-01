@@ -49,7 +49,7 @@ request.
 **3. It matters most for small requests sent one at a time.**
 Here FUSE reaches only about 1/15 of the kernel's speed, and ublk about 1/5.
 When many requests are sent at once, speed nearly catches up, but **each request still uses
-more CPU** (FUSE ~4× the kernel's, ublk ~2×). So on a busy machine, the cost shows up as lost
+more CPU** (FUSE ~5× the kernel's, ublk ~2×). So on a busy machine, the cost shows up as lost
 CPU even when speed looks fine.
 
 **4. A FUSE setting (splice) is a trade-off, not a fix.**
