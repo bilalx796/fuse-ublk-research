@@ -2,6 +2,7 @@
 # Run the reduced fio matrix against one setup and record system-wide CPU.
 #
 # Usage: scripts/run-matrix.sh <setup-name> <target> [reps]
+#   env: SKIP_PREFILL=1 (file already laid out), ONLY=<regex> (subset of configs)
 #   <target> is a block device (/dev/...) or a directory (a file is created in it).
 #
 # Output: results/raw/<setup>/<config>-r<rep>.json  (fio JSON)
@@ -43,7 +44,7 @@ configs=(
 "$root/scripts/capture-env.sh" "$out" >/dev/null
 
 # Lay out the file once for file-based setups so reads hit real data.
-if [[ ! -b "$target" ]]; then
+if [[ ! -b "$target" && -z "${SKIP_PREFILL:-}" ]]; then
   fio --name=prefill "${where[@]}" --size="$SIZE" --rw=write --bs=1m \
       --direct=1 --ioengine=io_uring --output=/dev/null
 fi
@@ -55,6 +56,7 @@ cpu_snapshot() {  # prints: busy_jiffies total_jiffies ctxt
 for rep in $(seq 1 "$reps"); do
   for c in "${configs[@]}"; do
     IFS=: read -r name rw bs qd nj <<<"$c"
+    [[ -n "${ONLY:-}" && ! "$name" =~ $ONLY ]] && continue   # optional config filter (regex)
     tag="$name-r$rep"
     read -r b0 t0 c0 < <(cpu_snapshot)
     fio --name="$name" "${where[@]}" --size="$SIZE" \

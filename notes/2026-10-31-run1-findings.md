@@ -52,6 +52,21 @@ All numbers below are medians; latency is fio total latency; CPU is system-wide 
   reach near-baseline IOPS, and FUSE writes do better than ext4-on-ublk (275k vs 141k).
   F2's write numbers are low across the board; possibly ext4 journal I/O through ublk. Investigate.
 
+## 4. Follow-up: FUSE with splice off (F1n, `passthrough_hp --nosplice`)
+
+- **O_DIRECT writes fail with EINVAL when splice is off.** libfuse copies write data into its own
+  buffer after the request header, which is not aligned for O_DIRECT on the backing ext4. So F1n
+  has reads only, on a file laid out through a splice mount first.
+- **The page zeroing goes away:** `clear_page_erms` is gone from the daemon's profile.
+- **4 KB qd1 read:** p50 38.1 → 34.0 µs, CPU 47.7 → 38.4 µs per I/O (about −20%).
+  Spread across repeats was 35%, so treat this as indicative. Still 4 context switches,
+  1 read + 1 writev per I/O.
+- **Large I/O is much worse without splice:** 128 KB qd1 p50 144 → 281 µs; 128 KB qd8
+  71k → 6.2k IOPS (p99 4.75 ms). Splice avoids a userspace data copy that dominates at 128 KB.
+- **Conclusion:** splice trades per-request page setup (bad for small I/O) for avoiding a copy
+  (good for large I/O). The page zeroing explains roughly 9 of FUSE's ~45 extra CPU µs at 4 KB;
+  the rest is the round trip (context switches, /dev/fuse syscalls) and the daemon's own I/O.
+
 ## Data quality
 
 - IOPS spread across repeats (max−min)/median is under 10% for most cells but **brd (B2) is noisy
@@ -60,7 +75,7 @@ All numbers below are medians; latency is fio total latency; CPU is system-wide 
 - 20 s runs, 3 repeats. Idle-system CPU background not subtracted (small relative to these values).
 
 ## Next session (priority order)
-1. F1 `--nosplice` and `--nocache` (tests the clear_page hypothesis; FUSE knob sensitivity).
+1. F1 `--nocache`, thread count; nosplice writes (needs an aligned-buffer patch). Splice result: see section 4.
 2. Multi-job (j4/j8) at 128 KB to settle the anomaly; queue depth 32+.
 3. Longer runs / 5 repeats on B2, B1 to reduce spread.
 4. ext4-on-ublk write investigation (journal, `-q`/`-d` settings).
