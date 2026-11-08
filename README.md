@@ -5,15 +5,16 @@ where that overhead comes from, and when it matters.
 
 **Resuming work?** Read [notes/NEXT-SESSION.md](notes/NEXT-SESSION.md) first.
 
-**Start here:** [results/README.md](results/README.md) is a plain-language overview of what
-we tested, how, and what we found.
+**Start here:** [RESEARCH-SO-FAR.md](RESEARCH-SO-FAR.md) explains the whole project and both runs
+in plain language (no technical background needed).
 
 ## Status
 
 | Run | Date | What | Result |
 |---|---|---|---|
 | 1 | 31 Oct 2026 | fio microbenchmarks, 7 setups + FUSE splice follow-up | Done: [overview](results/README.md), [detailed findings](notes/2026-10-31-run1-findings.md) |
-| next | – | FUSE/ublk settings sweeps, slow ublk writes, more parallelism, RocksDB put/get | Planned |
+| 2 | 8 Nov 2026 | Multi-job 128 KB + qd32, FUSE options, ext4-on-ublk writes, more repeats on B1/B2 | Done: [detailed findings](notes/2026-11-08-run2-findings.md), tables in `results/run2/` |
+| next | – | RocksDB put/get, real SSD, newer kernel (6.14+), loose ends from run 2 | Planned |
 
 Headline: for one small read, the kernel takes ~2–3 µs, ublk ~12–16 µs and FUSE ~38 µs.
 The cost comes mostly from the round trip to the userspace program (~4 context switches per request).

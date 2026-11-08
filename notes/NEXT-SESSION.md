@@ -3,7 +3,16 @@
 Context for whoever picks this up (including Claude in a new session, which will NOT remember
 earlier sessions; this file and the notes are the memory).
 
-## Where we are (as of 31 Oct 2026)
+## Where we are (as of 8 Nov 2026)
+- Run 2 done (8 Nov): `notes/2026-11-08-run2-findings.md`, data in `results/run2/`, runner
+  `scripts/run-2.sh p1..p4`. Plain-language summary of everything: `RESEARCH-SO-FAR.md`.
+- Decisions made 8 Nov: put/get = RocksDB db_bench (later session); RAM disks only so far;
+  run 2 stayed on kernel 6.8. Still to discuss with Omid: real SSD, and moving to 6.14+.
+- Open items for the next run: see "What is still open" at the end of the run-2 findings.
+- Lesson from 8 Nov: pushes go through the laptop's forwarded SSH agent. If the laptop sleeps or
+  the SSH window closes, pushes hang. Keep that window open, or set up a deploy key on the node.
+
+## Earlier status (31 Oct 2026)
 - Run 1 done: fio on 7 setups + FUSE nosplice reads. See `results/README.md` (plain summary) and
   `notes/2026-10-31-run1-findings.md` (details, explanations, next-step list).
 - Not done: RocksDB put/get, settings sweeps, ublk write investigation, multi-job 128 KB check.
