@@ -90,11 +90,57 @@ Medians reproduce run 1 within ~5% on a different node and boot for nearly every
 randwrite qd1 j4 (408k → 327k). So the run-1 headline numbers (ublk interface ≈ +10 µs and ≈ +9 µs
 CPU per 4 KB I/O) hold.
 
+## Phase 5: loose ends, same boot (`scripts/run-2-p5.sh`, data in `results/run2/p5/`)
+
+Short diagnostic runs (3–8 s, one job). Absolute IOPS here are lower than in the matrix because
+tracing is on; the per-I/O counts are what matter.
+
+**F2 write hypothesis confirmed: one deferred DIO-completion work item per write.**
+Counting every task wakeup (`sched:sched_wakeup`) during 4 KB randwrite qd1:
+
+| woken per I/O | B3 raw ublk write | F2 ext4 write | F2 ext4 read |
+|---|---:|---:|---:|
+| fio | 1.00 | 1.00 | 1.00 |
+| ublk.loop server | 1.00 | 1.00 | 1.00 |
+| kworker (CPU 12, a ublk server CPU) | 0 | **1.00** | 0 |
+
+`workqueue:workqueue_execute_start` names the work: `iomap_dio_complete_work`, 81,902 times for
+81,902 writes. ext4 direct writes complete through iomap's DIO workqueue when the device completes
+asynchronously (ublk); reads and inline-completing devices (brd) skip it. That is the extra context
+switch (3.9 → 4.9) and the qd1 write gap (B3 → F2, here 21.9 → 34.0 µs p50). A kernel cost of ext4/iomap
+on any async device, not of ublk itself.
+
+**FUSE `--nocache` read collapse explained: a synchronous GETATTR before every read.**
+kprobes on `fuse_do_getattr` / `fuse_simple_request` / `fuse_direct_IO`, plus the connection's
+`waiting` count sampled every 5 ms:
+
+| 4 KB, per I/O | defaults read qd8 | nocache read qd8 | nocache read qd1 | nocache write qd8 |
+|---|---:|---:|---:|---:|
+| IOPS | 225k | **29k** | 14k | 215k |
+| GETATTR round trips | 0 | **1.00** | 1.00 | 0 |
+| FUSE requests in flight (mean / max) | 2.9 / 8 | **1.4 / 2** | 0.8 / 1 | 3.1 / 8 |
+| context switches | 1.4 | 6.1 | 8.3 | 1.3 |
+
+With attribute timeout 0, the kernel revalidates the file size before every read
+(`fuse_cache_read_iter` → `fuse_update_attributes`), as a blocking GETATTR inside io_uring's submit
+path (no io-wq punts seen). fio's submitter waits on it, so at most one READ plus one GETATTR are ever
+in flight: queue depth 8 becomes ~1, and each read pays two round trips. Writes do not revalidate, so
+they are unaffected. Likely fixes (not tested): a non-zero attr timeout, or `direct_io` on open (which bypasses
+the cached read path that does the revalidation).
+
+**B2 multi-job 128 KB noise resolved.** 5 fresh repeats (`raw/B2-brd-rerun/`): read qd1 j4
+145–147k (CV 0.6%), qd8 j4 142–144k (CV 0.4%). The phase-1 means (215k / 202k, CV ~40%) were inflated by
+outlier runs; use ~145k. That is the same as F0 ext4 on brd (139–144k), as expected.
+
+Side note: two Claude Code processes on the node (file watchers, `fs.watch`) were woken ~2–3x per I/O
+during these traces. They are not in the I/O path, but stop them before the next timed matrix since
+CPU is counted system-wide.
+
 ## What is still open
 1. Application-level put/get (RocksDB db_bench): not started.
 2. Real SSD/NVMe instead of RAM disks: device latency may hide much of the overhead.
 3. Newer kernel (6.14+): FUSE passthrough, FUSE-over-io_uring, ublk zero-copy. These target exactly
    the costs measured here (round trips, data copies).
-4. Explain `--nocache` read collapse; profile `--single` vs pool; confirm the F2 write worker hypothesis.
+4. Profile `--single` vs the thread pool. (`--nocache` collapse and the F2 write worker: explained in phase 5.)
 5. FUSE nosplice writes (needs aligned-buffer patch; from run 1).
 6. A FUSE "null" filesystem to isolate the FUSE interface cost like B1 does for ublk.

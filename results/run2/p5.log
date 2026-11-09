@@ -1,0 +1,26 @@
+18:54:18 rerun start
+[B2-brd-rerun] read-128k-qd1-j4-r1 done
+[B2-brd-rerun] read-128k-qd8-j4-r1 done
+[B2-brd-rerun] read-128k-qd1-j4-r2 done
+[B2-brd-rerun] read-128k-qd8-j4-r2 done
+[B2-brd-rerun] read-128k-qd1-j4-r3 done
+[B2-brd-rerun] read-128k-qd8-j4-r3 done
+[B2-brd-rerun] read-128k-qd1-j4-r4 done
+[B2-brd-rerun] read-128k-qd8-j4-r4 done
+[B2-brd-rerun] read-128k-qd1-j4-r5 done
+[B2-brd-rerun] read-128k-qd8-j4-r5 done
+18:58:32 rerun done
+18:58:32 wakeups start
+18:59:13 wakeups done
+18:59:13 nocache start
+18:59:17 F1 mounted with: defaults
+18:59:26 F1-defaults-randread-qd8 done
+18:59:34 F1-defaults-randread-qd1 done
+18:59:43 F1-defaults-randwrite-qd8 done
+18:59:45 F1 mounted with: --nocache
+18:59:53 F1-nocache-randread-qd8 done
+19:00:02 F1-nocache-randread-qd1 done
+19:00:10 F1-nocache-randwrite-qd8 done
+19:00:12 F1 mounted with: defaults
+19:00:12 nocache done
+ALL-DONE

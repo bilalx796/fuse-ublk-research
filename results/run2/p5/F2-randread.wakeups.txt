@@ -1,0 +1,12 @@
+ 279648 fs.watch:9224 [120] CPU:
+ 270694 fs.watch:169079 [120] CPU:
+ 126965 ublk.loop:9024 [120] CPU:
+ 126960 fio:179734 [120] CPU:
+   1887 claude:169069 [120] CPU:
+   1594 claude:9215 [120] CPU:
+    378 jbd2/sda3-8:616 [120] CPU:
+    317 fio:179700 [120] CPU:
+    193 HeapHelper:179506 [120] CPU:
+    184 HeapHelper:179503 [120] CPU:
+    177 HeapHelper:179501 [120] CPU:
+    173 HeapHelper:179505 [120] CPU:

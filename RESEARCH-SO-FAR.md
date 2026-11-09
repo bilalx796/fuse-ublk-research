@@ -109,21 +109,23 @@ We tried FUSE with different settings:
 |---|---|
 | **One worker instead of a team** | Single requests got **30% faster** and used less effort, but it couldn't keep up when many requests came at once (about 3 times slower then). |
 | **Exactly 4 workers** | Response times became much **more consistent** (the slowest requests got twice as fast), for a small loss in total speed. |
-| **Turning caching off** | Much **worse**, especially for reading many things at once (about 10 times slower). We don't know why yet. |
+| **Turning caching off** | Much **worse**, especially for reading many things at once (about 10 times slower). **Solved later the same day:** without caching, Linux first asks the outside program "has this file changed size?" before *every* read, and waits for the answer. That doubles the trips and stops reads from overlapping. |
 | "clone-fd" option | No noticeable effect. |
 
 So there's no single "best" setting: it depends on whether the work comes one request at a time or
 in bulk.
 
-### Finding 7 (new): We ruled out one explanation for slow writes through ublk.
+### Finding 7 (new): We found why writes through ublk with a filing system are slow.
 
 Putting a normal filing system on top of ublk made **writing** noticeably slower than expected
 (about half the speed of ublk alone in some tests). The obvious suspect was the filing system's
 **journal** (a safety log it keeps of changes). We tested with the journal switched off, and
 **nothing changed**. We also counted what reached the outside program: no extra data was being
-written. What we did see is **one extra hand-off per write**. Our best guess is that Linux passes
-the "write finished" signal to a helper task instead of handling it directly, adding one more
-switch. This is a hypothesis to check next time.
+written. What we did see is **one extra hand-off per write**. We then traced it and **confirmed**
+the guess: after every write, Linux hands the "write finished" step to a helper task
+(`iomap_dio_complete_work`), exactly once per write, which adds one more switch. Reads don't do this.
+This is a cost of the filing system on any device that finishes requests later (like ublk), not of
+ublk itself.
 
 ---
 
@@ -149,8 +151,8 @@ It doesn't yet answer the following:
 4. **More machines and longer tests.** Everything ran on one type of machine, with 20-second tests.
    The results did repeat well across two different machines and days, which is encouraging.
 
-5. **A few loose ends:** why turning off FUSE's caching hurts so much, why one FUSE worker is
-   faster than many for single requests, and confirming the "extra hand-off" behind slow ublk writes.
+5. **One loose end:** why one FUSE worker is faster than many for single requests. (The caching
+   and slow-write questions were answered at the end of run 2.)
 
 ---
 

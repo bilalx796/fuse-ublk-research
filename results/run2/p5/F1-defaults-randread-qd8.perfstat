@@ -1,0 +1,7 @@
+# started on Sun Nov  8 18:59:17 2026
+
+1,,probe:fuse_do_getattr,267781152517,100.00,,
+1796623,,probe:fuse_direct_IO,267781067556,100.00,,
+5,,probe:fuse_simple_request,267781015033,100.00,,
+0,,io_uring:io_uring_queue_async_work,267780969531,100.00,,
+2538508,,context-switches,267780916540,100.00,,
