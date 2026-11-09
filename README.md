@@ -7,6 +7,8 @@ where that overhead comes from, and when it matters.
 
 **Start here:** [RESEARCH-SO-FAR.md](RESEARCH-SO-FAR.md) explains the whole project and both runs
 in plain language (no technical background needed).
+**Charts for both runs:** [results/figures/runs-1-2-combined.html](results/figures/runs-1-2-combined.html)
+(download and open in a browser).
 
 ## Status
 

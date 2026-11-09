@@ -1,0 +1,347 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>FUSE vs ublk, Runs 1–2</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: same single reading column as the run-1 page; each finding = heading, chart, evidence box, table toggle */
+:root{
+  --bg:#fcfcfb;--panel:#f4f4f1;--fg:#0b0b0b;--fg2:#52514e;--muted:#7a7974;--grid:#e4e3df;--axis:#bdbcb6;
+  --kernel:#2a78d6;--ublk:#eb6834;--fuse:#1baf7a;--seqA:#86b6ef;--seqB:#1c5cab;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#1a1a19;--panel:#232321;--fg:#f0efec;--fg2:#c3c2b7;--muted:#97968e;--grid:#30302d;--axis:#4a4945;
+  --kernel:#3987e5;--ublk:#d95926;--fuse:#199e70;--seqA:#184f95;--seqB:#6da7ec;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1a1a19;--panel:#232321;--fg:#f0efec;--fg2:#c3c2b7;--muted:#97968e;--grid:#30302d;--axis:#4a4945;
+  --kernel:#3987e5;--ublk:#d95926;--fuse:#199e70;--seqA:#184f95;--seqB:#6da7ec;color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.6}
+main{max-width:780px;margin:0 auto;padding-block:36px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:48px}
+header{display:grid;gap:10px}
+h1{font-size:28px;line-height:1.2;margin:0;text-wrap:balance;font-weight:600}
+h2{font-size:19px;line-height:1.35;margin:0;text-wrap:balance;font-weight:600}
+p{margin:0;max-width:66ch}
+code{font-family:var(--mono);font-size:.88em}
+.lede{color:var(--fg2)}
+.meta{font-family:var(--mono);font-size:12px;color:var(--muted)}
+section{display:grid;gap:14px;min-width:0}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--axis);border-radius:4px;padding:1px 6px;margin-left:8px;color:var(--fg2)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--fg2)}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.chart{width:100%;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+.chart text{font-family:var(--sans);font-size:12px;fill:var(--fg2)}
+.chart .val{font-family:var(--mono);font-size:11.5px;fill:var(--fg)}
+.chart .tick{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+.chart .grp{font-size:12.5px;fill:var(--fg)}
+.chart .hit{fill:transparent;cursor:default}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.pair>div{min-width:0;display:grid;gap:4px;align-content:start}
+.pair h3{font-size:13.5px;margin:0;font-weight:600;color:var(--fg2)}
+@media (max-width:620px){.pair{grid-template-columns:1fr}}
+.pair .chart svg{min-width:300px}
+.why{background:var(--panel);border-radius:8px;padding:14px 16px;display:grid;gap:8px;min-width:0}
+.why b{font-weight:600}
+.why ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.why .tbl{margin-top:2px}
+.summary{display:grid;gap:8px;padding-left:18px;margin:0}
+.summary li{max-width:66ch}
+details{font-size:13.5px}
+summary{cursor:pointer;color:var(--fg2)}
+summary:focus-visible{outline:2px solid var(--kernel);outline-offset:2px}
+.tbl{overflow-x:auto;margin-top:8px}
+table{border-collapse:collapse;font-variant-numeric:tabular-nums;min-width:100%}
+th,td{padding:5px 10px;border-bottom:1px solid var(--grid);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-weight:600;color:var(--fg2);font-size:13px}
+td{font-family:var(--mono);font-size:12.5px}
+#tip{position:fixed;pointer-events:none;background:var(--fg);color:var(--bg);font-size:12.5px;line-height:1.45;padding:7px 10px;border-radius:6px;max-width:260px;z-index:20}
+#tip b{font-weight:600}
+footer{color:var(--fg2);font-size:13.5px;display:grid;gap:10px;border-top:1px solid var(--grid);padding-top:20px}
+footer h2{font-size:15px}
+footer ul{margin:0;padding-left:18px;display:grid;gap:4px}
+footer .meta{margin-top:6px}
+</style>
+
+<main>
+<header>
+  <div class="eyebrow">Runs 1 + 2 combined · Emulab d430 · Linux 6.8 · 31 Oct &amp; 8 Nov 2026</div>
+  <h1>How much overhead do FUSE and ublk add, where does it come from, and when does it matter?</h1>
+  <p class="lede">Every FUSE or ublk setup is compared with the same storage path without the userspace layer. All devices are RAM-backed, so the layer sets the cost and the disk does not hide it. Tests are fio microbenchmarks; no application (RocksDB) yet.</p>
+  <div class="legend" aria-label="Setup families">
+    <span><i style="background:var(--kernel)"></i>Kernel only (baseline)</span>
+    <span><i style="background:var(--ublk)"></i>ublk</span>
+    <span><i style="background:var(--fuse)"></i>FUSE</span>
+  </div>
+  <p class="meta">µs = microsecond (one millionth of a second). Medians of 3–5 repeats × 20 s. Latency = total time per request. CPU = busy time on all CPUs (fio + server + kernel) per request. Each section is tagged with the run its data comes from.</p>
+</header>
+
+<section aria-label="Summary">
+  <div class="eyebrow">What we know now</div>
+  <ul class="summary">
+    <li><b>A small read costs ~2 µs in the kernel, ~12 µs through ublk, ~38 µs through FUSE.</b> Run 2 reproduced this within ~5% on a different machine.</li>
+    <li><b>The cost is the round trip</b> to the userspace program: about 4 context switches per request, against none in the kernel.</li>
+    <li><b>Many requests at once hide the delay, not the CPU.</b> At 32 in flight, speed nearly matches the kernel, but FUSE still uses ~4.5× its CPU per request and ublk ~2×.</li>
+    <li><b>With several senders, large requests expose both layers.</b> FUSE falls to 1/3–1/2 of ext4; ublk is capped by copying every byte on its 4 server threads.</li>
+    <li><b>Two puzzles solved:</b> slow ext4-on-ublk writes are an ext4 completion worker, and FUSE's no-cache collapse is a size check before every read.</li>
+  </ul>
+</section>
+
+<section>
+  <div class="eyebrow">Finding 1 · What is the overhead <span class="tag">run 1, confirmed in run 2</span></div>
+  <h2>One small read takes ~2–3 µs in the kernel, ~12–16 µs through ublk, ~38 µs through FUSE</h2>
+  <div class="chart" id="c1"></div>
+  <div class="why">
+    <p><b>Why.</b> With the kernel only, the read finishes inside one system call on one CPU. With ublk or FUSE, a separate program must wake up, do the work and reply, and then fio must wake up again: <b>about 4 context switches per request</b>, against 0 for the kernel. FUSE also does a second, real read into ext4 for every request.</p>
+    <p><b>Is it stable?</b> Run 2 repeated the ublk null and RAM-disk setups 5 times on a new node: 12.0 → 12.2 µs and 80.0k → 78.5k reads/s for ublk, 422k → 413k for the RAM disk.</p>
+  </div>
+  <details><summary>Show as table</summary><div class="tbl" id="t1"></div></details>
+</section>
+
+<section>
+  <div class="eyebrow">Finding 2 · Cost of each layer <span class="tag">run 1</span></div>
+  <h2>FUSE adds about 3× more time and CPU per request than ublk</h2>
+  <div class="pair">
+    <div><h3>Extra latency per 4 KB read (µs)</h3><div class="chart" id="c2a"></div></div>
+    <div><h3>Extra CPU per 4 KB read (µs)</h3><div class="chart" id="c2b"></div></div>
+  </div>
+  <div class="why">
+    <p><b>How to read it.</b> Each bar is one setup minus its matching kernel baseline. "ublk interface" (ublk null minus null_blk) is the cleanest measure of ublk itself, because its server does no I/O at all. The loop and FUSE bars also include the server's own I/O into the RAM disk.</p>
+    <p><b>Where FUSE's extra goes.</b> In the profile, the FUSE daemon's top kernel function was <code>clear_page_erms</code> (zeroing fresh memory pages) from libfuse's splice path, above the data copy itself. Turning splice off made small reads ~20% cheaper but large reads up to 10× slower, so it is a trade-off, not a fix.</p>
+  </div>
+  <details><summary>Show as table</summary><div class="tbl" id="t2"></div></details>
+</section>
+
+<section>
+  <div class="eyebrow">Finding 3 · Hidden cost <span class="tag">run 2</span></div>
+  <h2>With 32 requests in flight, speed nearly catches up, but CPU per request does not</h2>
+  <div class="pair">
+    <div><h3>4 KB reads per second (thousands)</h3><div class="chart" id="c3a"></div></div>
+    <div><h3>CPU per 4 KB read (µs)</h3><div class="chart" id="c3b"></div></div>
+  </div>
+  <div class="why">
+    <p><b>Why.</b> With many requests waiting, the server handles several per wake-up, so the delays overlap and throughput lands within ~10–25% of the kernel. But every request still has to be passed out, handled and answered. FUSE uses <b>~4.5×</b> the CPU of ext4 per request and ublk <b>~2×</b> its baseline. On a busy machine that CPU is taken from applications, even when the benchmark looks fine.</p>
+  </div>
+  <details><summary>Show as table</summary><div class="tbl" id="t3"></div></details>
+</section>
+
+<section>
+  <div class="eyebrow">Finding 4 · Large requests <span class="tag">run 2</span></div>
+  <h2>With four senders, large requests run at a fraction of the kernel's speed through either layer</h2>
+  <div class="legend">
+    <span><i style="background:var(--ublk)"></i>ublk interface (vs null_blk)</span>
+    <span><i style="background:var(--ublk);opacity:.55"></i>ublk loop (vs RAM disk)</span>
+    <span><i style="background:var(--fuse)"></i>FUSE over ext4 (vs ext4)</span>
+  </div>
+  <div class="chart" id="c4"></div>
+  <div class="why">
+    <p><b>The run-1 surprise was a test artifact.</b> In run 1, FUSE looked faster than ext4 on 128 KB reads. With a single fio job, ext4 copies every byte on that job's one CPU and stays near 37k/s at any depth, which is what FUSE "beat" (the 191% bar). With four jobs, ext4 scales to ~140k/s and FUSE does not.</p>
+    <p><b>ublk is capped by copying.</b> ublk's 4 queue threads copy every byte between the kernel and the server, and Linux 6.8 has no zero-copy for ublk. Those 4 server CPUs set the ceiling. FUSE's slowest 1% of 128 KB reads took ~3.5 ms, against 0.25–0.9 ms for ext4.</p>
+    <p><b>Noise fixed.</b> The RAM-disk baseline here was re-run 5 times on 8 Nov (145–147k and 142–144k reads/s, under 1% spread). Earlier repeats had varied ~40%.</p>
+  </div>
+  <details><summary>Show as table</summary><div class="tbl" id="t4"></div></details>
+</section>
+
+<section>
+  <div class="eyebrow">Finding 5 · FUSE settings <span class="tag">run 2</span></div>
+  <h2>Every FUSE setting trades one thing for another</h2>
+  <div class="pair">
+    <div><h3>One read at a time: median latency (µs)</h3><div class="chart" id="c5a"></div></div>
+    <div><h3>8 reads in flight: reads per second (thousands)</h3><div class="chart" id="c5b"></div></div>
+  </div>
+  <div class="why">
+    <ul>
+      <li><b>One worker thread</b> (<code>--single</code>): each request is ~30% faster and uses ~37% less CPU, but one thread caps out at ~113k reads/s under load.</li>
+      <li><b>Four worker threads</b>, one per server CPU: the slowest 1% of requests drop from 108 to 48 µs, for ~20% less throughput under load.</li>
+      <li><b><code>--clone-fd</code></b>: no measurable effect.</li>
+      <li><b>No caching</b> (<code>--nocache</code>): reads collapse under load. Explained in Finding 7.</li>
+    </ul>
+  </div>
+  <details><summary>Show as table</summary><div class="tbl" id="t5"></div></details>
+</section>
+
+<section>
+  <div class="eyebrow">Finding 6 · Puzzle solved <span class="tag">run 2</span></div>
+  <h2>Writes through ext4 on ublk are slow because of one extra kernel worker per write</h2>
+  <div class="chart" id="c6"></div>
+  <div class="why">
+    <p><b>Not the journal.</b> ext4 with the journal turned off gives the same numbers, and the disk saw no extra writes (its write count matched fio's).</p>
+    <p><b>What it is.</b> Tracing every task wake-up during the writes showed exactly one extra one per write: a kernel worker running <code>iomap_dio_complete_work</code>, <b>81,902 times for 81,902 writes</b>. Reads and raw ublk writes have none. ext4 hands the "write finished" step to a worker whenever the device finishes later rather than immediately, which ublk does and the RAM disk does not. This is a cost of ext4 on any such device, not of ublk itself.</p>
+    <div class="tbl" id="t6"></div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">Finding 7 · Puzzle solved <span class="tag">run 2</span></div>
+  <h2>With caching off, FUSE checks the file's size before every read, and reads stop overlapping</h2>
+  <div class="legend">
+    <span><i style="background:var(--fuse)"></i>Default settings</span>
+    <span><i style="background:var(--fuse);opacity:.5"></i>Caching off (--nocache)</span>
+  </div>
+  <div class="chart" id="c7"></div>
+  <div class="why">
+    <p><b>What it is.</b> With caching off, Linux asks the FUSE program for the file's attributes (a GETATTR request) before <b>every</b> read, and waits for the answer. Kernel probes counted exactly 1.00 GETATTR per read. Because fio's submitting thread waits on it, at most 2 FUSE requests were ever in flight instead of 8, so 8-deep reads behave like 1-deep reads that each pay two round trips. Writes skip the check and are unaffected.</p>
+    <p><b>Likely fix (not tested).</b> A non-zero attribute timeout, or opening files in FUSE's direct-I/O mode, which skips that check.</p>
+    <div class="tbl" id="t7"></div>
+  </div>
+  <p class="meta">Short diagnostic runs (8 s) with tracing on, so absolute speeds are lower than in the other charts. Compare the two bars in each row, not across sections.</p>
+</section>
+
+<footer>
+  <h2>What these results do not show yet</h2>
+  <ul>
+    <li><b>Real applications.</b> Only fio so far. RocksDB put/get is planned.</li>
+    <li><b>Real disks.</b> An SSD's own ~10–80 µs per request may hide much of this overhead.</li>
+    <li><b>Newer Linux.</b> 6.8 lacks FUSE passthrough, FUSE over io_uring and ublk zero-copy, which target exactly these costs.</li>
+    <li><b>Breadth.</b> One machine type, 20 s runs, 3–5 repeats. There's no FUSE "null" filesystem yet to isolate FUSE's interface cost the way ublk null does for ublk.</li>
+  </ul>
+  <p class="meta">Source data, scripts and full tables: github.com/bilalx796/fuse-ublk-research · results/summary.csv (run 1), results/run2/summary.csv and results/run2/p5/ (run 2) · notes/2026-10-31-run1-findings.md, notes/2026-11-08-run2-findings.md · plain-language version: RESEARCH-SO-FAR.md</p>
+</footer>
+</main>
+<div id="tip" hidden></div>
+
+<script>
+const D1 = {"B0-null_blk":{"randread-4k-qd1-j1":{"iops":459908.96,"lat_p50_us":1.93,"lat_p99_us":2.06,"cpu_us_per_io":2.45,"ctx_per_io":0.0,"iops_spread_pct":3.6},"randread-4k-qd1-j4":{"iops":1625605.47,"lat_p50_us":2.19,"lat_p99_us":2.42,"cpu_us_per_io":2.57,"ctx_per_io":0.0,"iops_spread_pct":4.0},"randread-4k-qd8-j1":{"iops":405958.35,"lat_p50_us":19.33,"lat_p99_us":21.89,"cpu_us_per_io":2.64,"ctx_per_io":0.0,"iops_spread_pct":16.3},"randwrite-4k-qd1-j1":{"iops":447470.33,"lat_p50_us":1.96,"lat_p99_us":2.04,"cpu_us_per_io":2.34,"ctx_per_io":0.0,"iops_spread_pct":2.2},"randwrite-4k-qd1-j4":{"iops":1589191.89,"lat_p50_us":2.26,"lat_p99_us":2.45,"cpu_us_per_io":2.57,"ctx_per_io":0.0,"iops_spread_pct":12.7},"randwrite-4k-qd8-j1":{"iops":447694.36,"lat_p50_us":17.54,"lat_p99_us":20.61,"cpu_us_per_io":2.3,"ctx_per_io":0.0,"iops_spread_pct":3.6},"read-128k-qd1-j1":{"iops":67043.7,"lat_p50_us":14.4,"lat_p99_us":17.02,"cpu_us_per_io":15.6,"ctx_per_io":2.0,"iops_spread_pct":0.8},"read-128k-qd8-j1":{"iops":85053.85,"lat_p50_us":95.74,"lat_p99_us":104.96,"cpu_us_per_io":12.18,"ctx_per_io":0.37,"iops_spread_pct":3.1},"write-128k-qd1-j1":{"iops":67088.95,"lat_p50_us":14.27,"lat_p99_us":17.28,"cpu_us_per_io":15.42,"ctx_per_io":2.0,"iops_spread_pct":2.2},"write-128k-qd8-j1":{"iops":81429.68,"lat_p50_us":107.01,"lat_p99_us":121.34,"cpu_us_per_io":12.82,"ctx_per_io":0.66,"iops_spread_pct":1.4}},"B1-ublk-null":{"randread-4k-qd1-j1":{"iops":80038.15,"lat_p50_us":11.97,"lat_p99_us":14.4,"cpu_us_per_io":11.63,"ctx_per_io":4.02,"iops_spread_pct":7.4},"randread-4k-qd1-j4":{"iops":414792.51,"lat_p50_us":9.02,"lat_p99_us":11.2,"cpu_us_per_io":7.04,"ctx_per_io":1.98,"iops_spread_pct":6.3},"randread-4k-qd8-j1":{"iops":423328.13,"lat_p50_us":18.56,"lat_p99_us":28.03,"cpu_us_per_io":4.79,"ctx_per_io":0.01,"iops_spread_pct":4.4},"randwrite-4k-qd1-j1":{"iops":82074.0,"lat_p50_us":11.71,"lat_p99_us":14.02,"cpu_us_per_io":11.31,"ctx_per_io":4.02,"iops_spread_pct":20.7},"randwrite-4k-qd1-j4":{"iops":407758.11,"lat_p50_us":8.9,"lat_p99_us":14.66,"cpu_us_per_io":7.24,"ctx_per_io":2.03,"iops_spread_pct":11.6},"randwrite-4k-qd8-j1":{"iops":378578.77,"lat_p50_us":20.86,"lat_p99_us":25.22,"cpu_us_per_io":5.01,"ctx_per_io":0.23,"iops_spread_pct":11.1},"read-128k-qd1-j1":{"iops":23565.22,"lat_p50_us":41.22,"lat_p99_us":46.85,"cpu_us_per_io":45.93,"ctx_per_io":4.04,"iops_spread_pct":29.8},"read-128k-qd8-j1":{"iops":69303.24,"lat_p50_us":114.18,"lat_p99_us":126.46,"cpu_us_per_io":23.37,"ctx_per_io":1.93,"iops_spread_pct":23.9},"write-128k-qd1-j1":{"iops":24074.45,"lat_p50_us":40.19,"lat_p99_us":46.85,"cpu_us_per_io":43.83,"ctx_per_io":4.1,"iops_spread_pct":7.5},"write-128k-qd8-j1":{"iops":76090.7,"lat_p50_us":112.13,"lat_p99_us":136.19,"cpu_us_per_io":22.12,"ctx_per_io":0.23,"iops_spread_pct":0.1}},"B2-brd":{"randread-4k-qd1-j1":{"iops":422031.2,"lat_p50_us":2.13,"lat_p99_us":2.61,"cpu_us_per_io":2.49,"ctx_per_io":0.0,"iops_spread_pct":28.5},"randread-4k-qd1-j4":{"iops":1532164.99,"lat_p50_us":2.35,"lat_p99_us":2.74,"cpu_us_per_io":2.64,"ctx_per_io":0.0,"iops_spread_pct":28.9},"randread-4k-qd8-j1":{"iops":403399.53,"lat_p50_us":19.58,"lat_p99_us":22.66,"cpu_us_per_io":2.57,"ctx_per_io":0.0,"iops_spread_pct":43.4},"randwrite-4k-qd1-j1":{"iops":358358.33,"lat_p50_us":2.54,"lat_p99_us":3.02,"cpu_us_per_io":2.9,"ctx_per_io":0.0,"iops_spread_pct":10.7},"randwrite-4k-qd1-j4":{"iops":1318494.93,"lat_p50_us":2.74,"lat_p99_us":3.18,"cpu_us_per_io":3.07,"ctx_per_io":0.0,"iops_spread_pct":2.8},"randwrite-4k-qd8-j1":{"iops":324296.34,"lat_p50_us":24.19,"lat_p99_us":33.54,"cpu_us_per_io":3.21,"ctx_per_io":0.0,"iops_spread_pct":8.8},"read-128k-qd1-j1":{"iops":38202.99,"lat_p50_us":25.47,"lat_p99_us":34.56,"cpu_us_per_io":27.14,"ctx_per_io":0.01,"iops_spread_pct":0.3},"read-128k-qd8-j1":{"iops":37150.14,"lat_p50_us":214.02,"lat_p99_us":224.26,"cpu_us_per_io":28.02,"ctx_per_io":0.01,"iops_spread_pct":1.8},"write-128k-qd1-j1":{"iops":27109.79,"lat_p50_us":36.1,"lat_p99_us":45.31,"cpu_us_per_io":38.51,"ctx_per_io":0.01,"iops_spread_pct":0.6},"write-128k-qd8-j1":{"iops":26293.83,"lat_p50_us":301.06,"lat_p99_us":321.54,"cpu_us_per_io":39.38,"ctx_per_io":0.01,"iops_spread_pct":0.7}},"B3-ublk-loop-brd":{"randread-4k-qd1-j1":{"iops":61272.54,"lat_p50_us":15.55,"lat_p99_us":18.56,"cpu_us_per_io":15.27,"ctx_per_io":3.93,"iops_spread_pct":1.6},"randread-4k-qd1-j4":{"iops":213366.53,"lat_p50_us":18.05,"lat_p99_us":21.63,"cpu_us_per_io":11.21,"ctx_per_io":2.04,"iops_spread_pct":1.1},"randread-4k-qd8-j1":{"iops":300525.37,"lat_p50_us":26.24,"lat_p99_us":34.56,"cpu_us_per_io":6.08,"ctx_per_io":0.42,"iops_spread_pct":1.5},"randwrite-4k-qd1-j1":{"iops":59505.88,"lat_p50_us":16.19,"lat_p99_us":19.33,"cpu_us_per_io":15.7,"ctx_per_io":3.92,"iops_spread_pct":3.2},"randwrite-4k-qd1-j4":{"iops":143910.15,"lat_p50_us":26.5,"lat_p99_us":32.13,"cpu_us_per_io":14.68,"ctx_per_io":2.52,"iops_spread_pct":2.1},"randwrite-4k-qd8-j1":{"iops":276558.27,"lat_p50_us":28.54,"lat_p99_us":38.14,"cpu_us_per_io":6.51,"ctx_per_io":0.34,"iops_spread_pct":0.4},"read-128k-qd1-j1":{"iops":13109.09,"lat_p50_us":75.26,"lat_p99_us":81.41,"cpu_us_per_io":80.61,"ctx_per_io":4.02,"iops_spread_pct":1.2},"read-128k-qd8-j1":{"iops":26034.1,"lat_p50_us":305.15,"lat_p99_us":358.4,"cpu_us_per_io":55.26,"ctx_per_io":0.54,"iops_spread_pct":0.2},"write-128k-qd1-j1":{"iops":10659.57,"lat_p50_us":92.67,"lat_p99_us":100.86,"cpu_us_per_io":98.38,"ctx_per_io":4.07,"iops_spread_pct":0.5},"write-128k-qd8-j1":{"iops":16205.44,"lat_p50_us":505.86,"lat_p99_us":577.54,"cpu_us_per_io":80.15,"ctx_per_io":0.62,"iops_spread_pct":1.4}},"F0-ext4-brd":{"randread-4k-qd1-j1":{"iops":341288.24,"lat_p50_us":2.64,"lat_p99_us":3.22,"cpu_us_per_io":3.03,"ctx_per_io":0.0,"iops_spread_pct":1.2},"randread-4k-qd1-j4":{"iops":1185357.18,"lat_p50_us":3.06,"lat_p99_us":3.7,"cpu_us_per_io":3.44,"ctx_per_io":0.0,"iops_spread_pct":4.3},"randread-4k-qd8-j1":{"iops":333298.68,"lat_p50_us":23.68,"lat_p99_us":26.75,"cpu_us_per_io":3.12,"ctx_per_io":0.0,"iops_spread_pct":3.1},"randwrite-4k-qd1-j1":{"iops":286826.01,"lat_p50_us":3.15,"lat_p99_us":3.73,"cpu_us_per_io":3.6,"ctx_per_io":0.0,"iops_spread_pct":3.7},"randwrite-4k-qd1-j4":{"iops":1013345.43,"lat_p50_us":3.63,"lat_p99_us":4.32,"cpu_us_per_io":3.99,"ctx_per_io":0.0,"iops_spread_pct":2.1},"randwrite-4k-qd8-j1":{"iops":289118.04,"lat_p50_us":27.26,"lat_p99_us":33.02,"cpu_us_per_io":3.58,"ctx_per_io":0.0,"iops_spread_pct":4.8},"read-128k-qd1-j1":{"iops":37361.43,"lat_p50_us":25.73,"lat_p99_us":36.1,"cpu_us_per_io":28.28,"ctx_per_io":0.01,"iops_spread_pct":1.6},"read-128k-qd8-j1":{"iops":36351.73,"lat_p50_us":211.97,"lat_p99_us":292.86,"cpu_us_per_io":28.54,"ctx_per_io":0.01,"iops_spread_pct":0.4},"write-128k-qd1-j1":{"iops":27474.28,"lat_p50_us":35.07,"lat_p99_us":46.85,"cpu_us_per_io":38.09,"ctx_per_io":0.01,"iops_spread_pct":1.2},"write-128k-qd8-j1":{"iops":26694.47,"lat_p50_us":292.86,"lat_p99_us":387.07,"cpu_us_per_io":38.83,"ctx_per_io":0.01,"iops_spread_pct":0.8}},"F1-fuse-hp-ext4-brd":{"randread-4k-qd1-j1":{"iops":22304.44,"lat_p50_us":38.14,"lat_p99_us":108.03,"cpu_us_per_io":47.68,"ctx_per_io":4.13,"iops_spread_pct":21.1},"randread-4k-qd1-j4":{"iops":234332.58,"lat_p50_us":15.42,"lat_p99_us":27.52,"cpu_us_per_io":21.0,"ctx_per_io":3.61,"iops_spread_pct":6.7},"randread-4k-qd8-j1":{"iops":318610.77,"lat_p50_us":23.42,"lat_p99_us":37.63,"cpu_us_per_io":15.18,"ctx_per_io":0.66,"iops_spread_pct":6.2},"randwrite-4k-qd1-j1":{"iops":16465.03,"lat_p50_us":44.8,"lat_p99_us":125.44,"cpu_us_per_io":58.47,"ctx_per_io":4.14,"iops_spread_pct":6.1},"randwrite-4k-qd1-j4":{"iops":213830.51,"lat_p50_us":17.28,"lat_p99_us":24.96,"cpu_us_per_io":22.59,"ctx_per_io":3.7,"iops_spread_pct":6.4},"randwrite-4k-qd8-j1":{"iops":275049.1,"lat_p50_us":30.34,"lat_p99_us":40.19,"cpu_us_per_io":17.38,"ctx_per_io":0.88,"iops_spread_pct":8.1},"read-128k-qd1-j1":{"iops":6049.2,"lat_p50_us":144.38,"lat_p99_us":224.26,"cpu_us_per_io":177.3,"ctx_per_io":4.17,"iops_spread_pct":0.2},"read-128k-qd8-j1":{"iops":71210.49,"lat_p50_us":70.14,"lat_p99_us":585.73,"cpu_us_per_io":63.38,"ctx_per_io":1.4,"iops_spread_pct":0.5},"write-128k-qd1-j1":{"iops":4322.18,"lat_p50_us":232.45,"lat_p99_us":264.19,"cpu_us_per_io":217.68,"ctx_per_io":4.15,"iops_spread_pct":1.1},"write-128k-qd8-j1":{"iops":61956.0,"lat_p50_us":88.58,"lat_p99_us":1155.07,"cpu_us_per_io":75.09,"ctx_per_io":1.42,"iops_spread_pct":0.2}},"F1n-fuse-hp-nosplice-ext4-brd":{"randread-4k-qd1-j1":{"iops":24322.23,"lat_p50_us":34.05,"lat_p99_us":99.84,"cpu_us_per_io":38.42,"ctx_per_io":4.02,"iops_spread_pct":35.2},"randread-4k-qd1-j4":{"iops":202101.64,"lat_p50_us":19.07,"lat_p99_us":22.91,"cpu_us_per_io":20.08,"ctx_per_io":3.97,"iops_spread_pct":1.7},"randread-4k-qd8-j1":{"iops":254465.08,"lat_p50_us":30.85,"lat_p99_us":38.14,"cpu_us_per_io":16.36,"ctx_per_io":1.64,"iops_spread_pct":8.4},"read-128k-qd1-j1":{"iops":3529.72,"lat_p50_us":280.58,"lat_p99_us":354.3,"cpu_us_per_io":326.77,"ctx_per_io":4.37,"iops_spread_pct":0.5},"read-128k-qd8-j1":{"iops":6201.63,"lat_p50_us":1236.99,"lat_p99_us":4751.36,"cpu_us_per_io":351.6,"ctx_per_io":6.53,"iops_spread_pct":0.3}},"F2-ext4-ublk-loop-brd":{"randread-4k-qd1-j1":{"iops":58611.07,"lat_p50_us":16.51,"lat_p99_us":19.84,"cpu_us_per_io":16.09,"ctx_per_io":3.91,"iops_spread_pct":3.7},"randread-4k-qd1-j4":{"iops":212220.84,"lat_p50_us":17.79,"lat_p99_us":22.91,"cpu_us_per_io":11.6,"ctx_per_io":2.07,"iops_spread_pct":0.8},"randread-4k-qd8-j1":{"iops":297285.54,"lat_p50_us":25.98,"lat_p99_us":33.02,"cpu_us_per_io":6.51,"ctx_per_io":0.19,"iops_spread_pct":2.1},"randwrite-4k-qd1-j1":{"iops":41091.1,"lat_p50_us":23.17,"lat_p99_us":28.29,"cpu_us_per_io":22.5,"ctx_per_io":5.0,"iops_spread_pct":1.9},"randwrite-4k-qd1-j4":{"iops":92369.38,"lat_p50_us":41.73,"lat_p99_us":48.38,"cpu_us_per_io":21.6,"ctx_per_io":2.73,"iops_spread_pct":0.8},"randwrite-4k-qd8-j1":{"iops":141388.88,"lat_p50_us":55.55,"lat_p99_us":63.23,"cpu_us_per_io":10.87,"ctx_per_io":0.62,"iops_spread_pct":2.1},"read-128k-qd1-j1":{"iops":12707.26,"lat_p50_us":76.29,"lat_p99_us":83.46,"cpu_us_per_io":82.53,"ctx_per_io":4.0,"iops_spread_pct":1.5},"read-128k-qd8-j1":{"iops":25909.35,"lat_p50_us":325.63,"lat_p99_us":358.4,"cpu_us_per_io":55.86,"ctx_per_io":0.64,"iops_spread_pct":0.1},"write-128k-qd1-j1":{"iops":9364.98,"lat_p50_us":104.96,"lat_p99_us":114.18,"cpu_us_per_io":110.57,"ctx_per_io":5.09,"iops_spread_pct":0.7},"write-128k-qd8-j1":{"iops":13662.92,"lat_p50_us":585.73,"lat_p99_us":618.5,"cpu_us_per_io":88.0,"ctx_per_io":0.65,"iops_spread_pct":0.1}}};
+const D2 = {"B0-null_blk": {"randread-4k-qd32-j1": {"iops": 457376.58, "lat_p50_us": 69.12, "lat_p99_us": 74.24, "cpu_us_per_io": 2.28, "ctx_per_io": 0.0, "iops_spread_pct": 2.5, "reps": 3.0}, "randwrite-4k-qd32-j1": {"iops": 441047.5, "lat_p50_us": 71.17, "lat_p99_us": 89.6, "cpu_us_per_io": 2.43, "ctx_per_io": 0.0, "iops_spread_pct": 8.7, "reps": 3.0}, "read-128k-qd1-j4": {"iops": 235364.16, "lat_p50_us": 16.51, "lat_p99_us": 19.84, "cpu_us_per_io": 17.14, "ctx_per_io": 1.95, "iops_spread_pct": 3.1, "reps": 3.0}, "read-128k-qd32-j1": {"iops": 88239.39, "lat_p50_us": 366.59, "lat_p99_us": 382.98, "cpu_us_per_io": 11.72, "ctx_per_io": 0.11, "iops_spread_pct": 1.6, "reps": 3.0}, "read-128k-qd8-j4": {"iops": 301964.35, "lat_p50_us": 107.01, "lat_p99_us": 127.49, "cpu_us_per_io": 13.36, "ctx_per_io": 0.36, "iops_spread_pct": 0.8, "reps": 3.0}, "write-128k-qd1-j4": {"iops": 239358.78, "lat_p50_us": 16.19, "lat_p99_us": 19.58, "cpu_us_per_io": 16.91, "ctx_per_io": 2.0, "iops_spread_pct": 2.0, "reps": 3.0}, "write-128k-qd32-j1": {"iops": 84263.29, "lat_p50_us": 419.84, "lat_p99_us": 440.32, "cpu_us_per_io": 12.25, "ctx_per_io": 0.47, "iops_spread_pct": 1.5, "reps": 3.0}, "write-128k-qd8-j4": {"iops": 292284.84, "lat_p50_us": 120.32, "lat_p99_us": 136.19, "cpu_us_per_io": 13.86, "ctx_per_io": 0.64, "iops_spread_pct": 1.5, "reps": 3.0}}, "B1-ublk-null": {"randread-4k-qd1-j1": {"iops": 78513.67, "lat_p50_us": 12.22, "lat_p99_us": 14.78, "cpu_us_per_io": 11.38, "ctx_per_io": 3.99, "iops_spread_pct": 2.0, "reps": 5.0}, "randread-4k-qd1-j4": {"iops": 451843.36, "lat_p50_us": 8.51, "lat_p99_us": 10.82, "cpu_us_per_io": 6.64, "ctx_per_io": 1.96, "iops_spread_pct": 5.5, "reps": 5.0}, "randread-4k-qd32-j1": {"iops": 425997.5, "lat_p50_us": 74.24, "lat_p99_us": 88.58, "cpu_us_per_io": 4.68, "ctx_per_io": 0.05, "iops_spread_pct": 10.5, "reps": 3.0}, "randread-4k-qd8-j1": {"iops": 417180.39, "lat_p50_us": 18.56, "lat_p99_us": 24.7, "cpu_us_per_io": 4.91, "ctx_per_io": 0.1, "iops_spread_pct": 9.6, "reps": 5.0}, "randwrite-4k-qd1-j1": {"iops": 77024.2, "lat_p50_us": 12.35, "lat_p99_us": 15.04, "cpu_us_per_io": 11.61, "ctx_per_io": 4.03, "iops_spread_pct": 1.5, "reps": 5.0}, "randwrite-4k-qd1-j4": {"iops": 327316.37, "lat_p50_us": 12.48, "lat_p99_us": 15.55, "cpu_us_per_io": 8.09, "ctx_per_io": 2.34, "iops_spread_pct": 7.3, "reps": 5.0}, "randwrite-4k-qd32-j1": {"iops": 388843.41, "lat_p50_us": 81.41, "lat_p99_us": 96.77, "cpu_us_per_io": 4.94, "ctx_per_io": 0.18, "iops_spread_pct": 6.9, "reps": 3.0}, "randwrite-4k-qd8-j1": {"iops": 370801.01, "lat_p50_us": 20.86, "lat_p99_us": 25.73, "cpu_us_per_io": 5.06, "ctx_per_io": 0.25, "iops_spread_pct": 9.2, "reps": 5.0}, "read-128k-qd1-j1": {"iops": 24917.15, "lat_p50_us": 39.17, "lat_p99_us": 45.31, "cpu_us_per_io": 42.61, "ctx_per_io": 4.04, "iops_spread_pct": 6.3, "reps": 5.0}, "read-128k-qd1-j4": {"iops": 59110.64, "lat_p50_us": 66.05, "lat_p99_us": 72.19, "cpu_us_per_io": 35.61, "ctx_per_io": 1.99, "iops_spread_pct": 20.3, "reps": 3.0}, "read-128k-qd32-j1": {"iops": 81859.41, "lat_p50_us": 387.07, "lat_p99_us": 419.84, "cpu_us_per_io": 21.21, "ctx_per_io": 1.98, "iops_spread_pct": 0.3, "reps": 3.0}, "read-128k-qd8-j1": {"iops": 78757.26, "lat_p50_us": 99.84, "lat_p99_us": 113.15, "cpu_us_per_io": 21.6, "ctx_per_io": 1.92, "iops_spread_pct": 12.9, "reps": 5.0}, "read-128k-qd8-j4": {"iops": 56299.79, "lat_p50_us": 569.34, "lat_p99_us": 626.69, "cpu_us_per_io": 35.85, "ctx_per_io": 0.56, "iops_spread_pct": 34.2, "reps": 3.0}, "write-128k-qd1-j1": {"iops": 24072.65, "lat_p50_us": 40.7, "lat_p99_us": 47.36, "cpu_us_per_io": 44.05, "ctx_per_io": 4.1, "iops_spread_pct": 5.0, "reps": 5.0}, "write-128k-qd1-j4": {"iops": 43424.39, "lat_p50_us": 81.41, "lat_p99_us": 136.19, "cpu_us_per_io": 43.55, "ctx_per_io": 2.35, "iops_spread_pct": 1.4, "reps": 3.0}, "write-128k-qd32-j1": {"iops": 83027.1, "lat_p50_us": 403.46, "lat_p99_us": 505.86, "cpu_us_per_io": 20.88, "ctx_per_io": 0.06, "iops_spread_pct": 0.5, "reps": 3.0}, "write-128k-qd8-j1": {"iops": 76058.95, "lat_p50_us": 112.13, "lat_p99_us": 136.19, "cpu_us_per_io": 22.65, "ctx_per_io": 0.23, "iops_spread_pct": 0.7, "reps": 5.0}, "write-128k-qd8-j4": {"iops": 51439.68, "lat_p50_us": 643.07, "lat_p99_us": 970.75, "cpu_us_per_io": 37.62, "ctx_per_io": 0.31, "iops_spread_pct": 2.0, "reps": 3.0}}, "B2-brd": {"randread-4k-qd1-j1": {"iops": 412808.96, "lat_p50_us": 2.16, "lat_p99_us": 2.64, "cpu_us_per_io": 2.55, "ctx_per_io": 0.0, "iops_spread_pct": 10.6, "reps": 5.0}, "randread-4k-qd1-j4": {"iops": 1520339.73, "lat_p50_us": 2.38, "lat_p99_us": 2.74, "cpu_us_per_io": 2.66, "ctx_per_io": 0.0, "iops_spread_pct": 2.1, "reps": 5.0}, "randread-4k-qd32-j1": {"iops": 388244.54, "lat_p50_us": 81.41, "lat_p99_us": 86.53, "cpu_us_per_io": 2.68, "ctx_per_io": 0.0, "iops_spread_pct": 3.7, "reps": 3.0}, "randread-4k-qd8-j1": {"iops": 399395.98, "lat_p50_us": 19.58, "lat_p99_us": 23.68, "cpu_us_per_io": 2.62, "ctx_per_io": 0.0, "iops_spread_pct": 1.7, "reps": 5.0}, "randwrite-4k-qd1-j1": {"iops": 360907.76, "lat_p50_us": 2.51, "lat_p99_us": 2.99, "cpu_us_per_io": 2.92, "ctx_per_io": 0.0, "iops_spread_pct": 1.8, "reps": 5.0}, "randwrite-4k-qd1-j4": {"iops": 1308078.0, "lat_p50_us": 2.74, "lat_p99_us": 3.22, "cpu_us_per_io": 3.1, "ctx_per_io": 0.0, "iops_spread_pct": 5.5, "reps": 5.0}, "randwrite-4k-qd32-j1": {"iops": 344976.1, "lat_p50_us": 91.65, "lat_p99_us": 96.77, "cpu_us_per_io": 3.0, "ctx_per_io": 0.0, "iops_spread_pct": 3.3, "reps": 3.0}, "randwrite-4k-qd8-j1": {"iops": 344340.48, "lat_p50_us": 22.91, "lat_p99_us": 26.24, "cpu_us_per_io": 3.04, "ctx_per_io": 0.0, "iops_spread_pct": 0.5, "reps": 5.0}, "read-128k-qd1-j1": {"iops": 39035.55, "lat_p50_us": 25.22, "lat_p99_us": 28.8, "cpu_us_per_io": 26.78, "ctx_per_io": 0.01, "iops_spread_pct": 3.7, "reps": 5.0}, "read-128k-qd1-j4": {"iops": 148159.03, "lat_p50_us": 26.24, "lat_p99_us": 36.1, "cpu_us_per_io": 27.25, "ctx_per_io": 0.0, "iops_spread_pct": 136.2, "reps": 3.0}, "read-128k-qd32-j1": {"iops": 37515.37, "lat_p50_us": 847.87, "lat_p99_us": 872.45, "cpu_us_per_io": 27.76, "ctx_per_io": 0.01, "iops_spread_pct": 0.2, "reps": 3.0}, "read-128k-qd8-j1": {"iops": 37581.47, "lat_p50_us": 211.97, "lat_p99_us": 226.3, "cpu_us_per_io": 27.86, "ctx_per_io": 0.01, "iops_spread_pct": 1.4, "reps": 5.0}, "read-128k-qd8-j4": {"iops": 143410.23, "lat_p50_us": 220.16, "lat_p99_us": 242.69, "cpu_us_per_io": 28.18, "ctx_per_io": 0.0, "iops_spread_pct": 124.2, "reps": 3.0}, "write-128k-qd1-j1": {"iops": 28869.86, "lat_p50_us": 34.05, "lat_p99_us": 38.66, "cpu_us_per_io": 36.37, "ctx_per_io": 0.02, "iops_spread_pct": 1.2, "reps": 5.0}, "write-128k-qd1-j4": {"iops": 109986.4, "lat_p50_us": 35.58, "lat_p99_us": 40.19, "cpu_us_per_io": 36.68, "ctx_per_io": 0.0, "iops_spread_pct": 0.4, "reps": 3.0}, "write-128k-qd32-j1": {"iops": 27532.07, "lat_p50_us": 1155.07, "lat_p99_us": 1187.84, "cpu_us_per_io": 37.55, "ctx_per_io": 0.01, "iops_spread_pct": 1.3, "reps": 3.0}, "write-128k-qd8-j1": {"iops": 27764.31, "lat_p50_us": 284.67, "lat_p99_us": 305.15, "cpu_us_per_io": 37.8, "ctx_per_io": 0.02, "iops_spread_pct": 1.9, "reps": 5.0}, "write-128k-qd8-j4": {"iops": 106789.52, "lat_p50_us": 296.96, "lat_p99_us": 309.25, "cpu_us_per_io": 37.79, "ctx_per_io": 0.0, "iops_spread_pct": 0.2, "reps": 3.0}}, "B3-ublk-loop-brd": {"randread-4k-qd32-j1": {"iops": 333336.78, "lat_p50_us": 96.77, "lat_p99_us": 111.1, "cpu_us_per_io": 5.58, "ctx_per_io": 0.14, "iops_spread_pct": 0.7, "reps": 3.0}, "randwrite-4k-qd32-j1": {"iops": 300847.46, "lat_p50_us": 107.01, "lat_p99_us": 116.22, "cpu_us_per_io": 6.44, "ctx_per_io": 0.07, "iops_spread_pct": 1.0, "reps": 3.0}, "read-128k-qd1-j4": {"iops": 25242.89, "lat_p50_us": 156.67, "lat_p99_us": 175.1, "cpu_us_per_io": 60.01, "ctx_per_io": 2.0, "iops_spread_pct": 22.5, "reps": 3.0}, "read-128k-qd32-j1": {"iops": 27242.29, "lat_p50_us": 1105.92, "lat_p99_us": 1728.51, "cpu_us_per_io": 54.38, "ctx_per_io": 0.16, "iops_spread_pct": 0.5, "reps": 3.0}, "read-128k-qd8-j4": {"iops": 22163.58, "lat_p50_us": 1417.22, "lat_p99_us": 2039.81, "cpu_us_per_io": 64.77, "ctx_per_io": 0.38, "iops_spread_pct": 11.5, "reps": 3.0}, "write-128k-qd1-j4": {"iops": 19584.41, "lat_p50_us": 201.73, "lat_p99_us": 214.02, "cpu_us_per_io": 73.35, "ctx_per_io": 2.53, "iops_spread_pct": 16.3, "reps": 3.0}, "write-128k-qd32-j1": {"iops": 21761.86, "lat_p50_us": 1466.37, "lat_p99_us": 1712.13, "cpu_us_per_io": 63.24, "ctx_per_io": 0.15, "iops_spread_pct": 1.2, "reps": 3.0}, "write-128k-qd8-j4": {"iops": 16893.81, "lat_p50_us": 1925.12, "lat_p99_us": 2056.19, "cpu_us_per_io": 81.06, "ctx_per_io": 0.35, "iops_spread_pct": 9.8, "reps": 3.0}}, "F0-ext4-brd": {"randread-4k-qd32-j1": {"iops": 332632.97, "lat_p50_us": 95.74, "lat_p99_us": 99.84, "cpu_us_per_io": 3.11, "ctx_per_io": 0.0, "iops_spread_pct": 2.3, "reps": 3.0}, "randwrite-4k-qd1-j1": {"iops": 293007.35, "lat_p50_us": 3.12, "lat_p99_us": 3.73, "cpu_us_per_io": 3.52, "ctx_per_io": 0.0, "iops_spread_pct": 3.9, "reps": 3.0}, "randwrite-4k-qd1-j4": {"iops": 1017649.87, "lat_p50_us": 3.6, "lat_p99_us": 4.32, "cpu_us_per_io": 3.97, "ctx_per_io": 0.0, "iops_spread_pct": 5.6, "reps": 3.0}, "randwrite-4k-qd32-j1": {"iops": 279719.21, "lat_p50_us": 113.15, "lat_p99_us": 124.42, "cpu_us_per_io": 3.69, "ctx_per_io": 0.0, "iops_spread_pct": 7.3, "reps": 3.0}, "randwrite-4k-qd8-j1": {"iops": 289951.4, "lat_p50_us": 27.01, "lat_p99_us": 32.64, "cpu_us_per_io": 3.58, "ctx_per_io": 0.0, "iops_spread_pct": 2.8, "reps": 3.0}, "read-128k-qd1-j4": {"iops": 144046.8, "lat_p50_us": 27.01, "lat_p99_us": 37.12, "cpu_us_per_io": 28.04, "ctx_per_io": 0.0, "iops_spread_pct": 1.1, "reps": 3.0}, "read-128k-qd32-j1": {"iops": 37408.38, "lat_p50_us": 856.06, "lat_p99_us": 872.45, "cpu_us_per_io": 27.71, "ctx_per_io": 0.01, "iops_spread_pct": 0.8, "reps": 3.0}, "read-128k-qd8-j4": {"iops": 139108.69, "lat_p50_us": 228.35, "lat_p99_us": 250.88, "cpu_us_per_io": 28.98, "ctx_per_io": 0.0, "iops_spread_pct": 1.2, "reps": 3.0}, "write-128k-qd1-j1": {"iops": 27813.71, "lat_p50_us": 34.56, "lat_p99_us": 43.26, "cpu_us_per_io": 37.1, "ctx_per_io": 0.01, "iops_spread_pct": 1.9, "reps": 3.0}, "write-128k-qd1-j4": {"iops": 106968.05, "lat_p50_us": 36.61, "lat_p99_us": 43.78, "cpu_us_per_io": 37.73, "ctx_per_io": 0.0, "iops_spread_pct": 0.4, "reps": 3.0}, "write-128k-qd32-j1": {"iops": 27094.69, "lat_p50_us": 1171.46, "lat_p99_us": 1204.22, "cpu_us_per_io": 38.29, "ctx_per_io": 0.01, "iops_spread_pct": 0.8, "reps": 3.0}, "write-128k-qd8-j1": {"iops": 26912.8, "lat_p50_us": 288.77, "lat_p99_us": 350.21, "cpu_us_per_io": 38.68, "ctx_per_io": 0.01, "iops_spread_pct": 1.3, "reps": 3.0}, "write-128k-qd8-j4": {"iops": 104582.57, "lat_p50_us": 305.15, "lat_p99_us": 317.44, "cpu_us_per_io": 38.52, "ctx_per_io": 0.0, "iops_spread_pct": 0.3, "reps": 3.0}}, "F1-fuse-hp-ext4-brd": {"randread-4k-qd32-j1": {"iops": 347560.82, "lat_p50_us": 78.34, "lat_p99_us": 136.19, "cpu_us_per_io": 14.01, "ctx_per_io": 0.3, "iops_spread_pct": 0.5, "reps": 3.0}, "randwrite-4k-qd32-j1": {"iops": 314063.9, "lat_p50_us": 88.58, "lat_p99_us": 146.43, "cpu_us_per_io": 15.71, "ctx_per_io": 0.24, "iops_spread_pct": 0.6, "reps": 3.0}, "read-128k-qd1-j4": {"iops": 47881.01, "lat_p50_us": 82.43, "lat_p99_us": 89.6, "cpu_us_per_io": 88.56, "ctx_per_io": 4.01, "iops_spread_pct": 0.3, "reps": 3.0}, "read-128k-qd32-j1": {"iops": 71308.54, "lat_p50_us": 370.69, "lat_p99_us": 3424.26, "cpu_us_per_io": 62.55, "ctx_per_io": 1.08, "iops_spread_pct": 0.3, "reps": 3.0}, "read-128k-qd8-j4": {"iops": 68340.48, "lat_p50_us": 399.36, "lat_p99_us": 3489.79, "cpu_us_per_io": 67.63, "ctx_per_io": 1.95, "iops_spread_pct": 0.2, "reps": 3.0}, "write-128k-qd1-j4": {"iops": 37363.39, "lat_p50_us": 104.96, "lat_p99_us": 116.22, "cpu_us_per_io": 109.94, "ctx_per_io": 4.04, "iops_spread_pct": 0.9, "reps": 3.0}, "write-128k-qd32-j1": {"iops": 62873.96, "lat_p50_us": 419.84, "lat_p99_us": 3489.79, "cpu_us_per_io": 72.12, "ctx_per_io": 1.06, "iops_spread_pct": 0.2, "reps": 3.0}, "write-128k-qd8-j4": {"iops": 60090.75, "lat_p50_us": 456.7, "lat_p99_us": 3620.86, "cpu_us_per_io": 83.94, "ctx_per_io": 2.41, "iops_spread_pct": 0.0, "reps": 3.0}}, "F1c-fuse-hp-nocache": {"randread-4k-qd1-j1": {"iops": 12198.69, "lat_p50_us": 72.19, "lat_p99_us": 146.43, "cpu_us_per_io": 82.86, "ctx_per_io": 8.15, "iops_spread_pct": 22.0, "reps": 3.0}, "randread-4k-qd8-j1": {"iops": 28778.11, "lat_p50_us": 276.48, "lat_p99_us": 301.06, "cpu_us_per_io": 70.8, "ctx_per_io": 6.02, "iops_spread_pct": 6.2, "reps": 3.0}, "randwrite-4k-qd1-j1": {"iops": 14911.65, "lat_p50_us": 49.92, "lat_p99_us": 129.54, "cpu_us_per_io": 62.91, "ctx_per_io": 4.03, "iops_spread_pct": 50.2, "reps": 3.0}, "randwrite-4k-qd8-j1": {"iops": 290763.61, "lat_p50_us": 26.5, "lat_p99_us": 41.22, "cpu_us_per_io": 16.84, "ctx_per_io": 0.45, "iops_spread_pct": 2.2, "reps": 3.0}, "read-128k-qd1-j1": {"iops": 4979.25, "lat_p50_us": 199.68, "lat_p99_us": 261.12, "cpu_us_per_io": 219.11, "ctx_per_io": 8.29, "iops_spread_pct": 0.4, "reps": 3.0}, "read-128k-qd8-j1": {"iops": 42726.11, "lat_p50_us": 183.3, "lat_p99_us": 288.77, "cpu_us_per_io": 96.8, "ctx_per_io": 4.86, "iops_spread_pct": 0.8, "reps": 3.0}}, "F1cf-fuse-hp-clonefd": {"randread-4k-qd1-j1": {"iops": 18410.48, "lat_p50_us": 41.73, "lat_p99_us": 117.25, "cpu_us_per_io": 54.03, "ctx_per_io": 4.12, "iops_spread_pct": 38.8, "reps": 3.0}, "randread-4k-qd8-j1": {"iops": 312085.2, "lat_p50_us": 23.42, "lat_p99_us": 40.7, "cpu_us_per_io": 15.48, "ctx_per_io": 0.59, "iops_spread_pct": 3.7, "reps": 3.0}, "randwrite-4k-qd1-j1": {"iops": 17967.25, "lat_p50_us": 44.29, "lat_p99_us": 121.34, "cpu_us_per_io": 56.17, "ctx_per_io": 4.08, "iops_spread_pct": 23.8, "reps": 3.0}, "randwrite-4k-qd8-j1": {"iops": 287117.79, "lat_p50_us": 25.47, "lat_p99_us": 43.26, "cpu_us_per_io": 16.89, "ctx_per_io": 0.57, "iops_spread_pct": 8.5, "reps": 3.0}, "read-128k-qd1-j1": {"iops": 5995.75, "lat_p50_us": 146.43, "lat_p99_us": 226.3, "cpu_us_per_io": 171.87, "ctx_per_io": 4.14, "iops_spread_pct": 1.2, "reps": 3.0}, "read-128k-qd8-j1": {"iops": 71056.05, "lat_p50_us": 71.17, "lat_p99_us": 659.46, "cpu_us_per_io": 63.62, "ctx_per_io": 1.38, "iops_spread_pct": 0.3, "reps": 3.0}}, "F1s-fuse-hp-single": {"randread-4k-qd1-j1": {"iops": 35548.77, "lat_p50_us": 26.5, "lat_p99_us": 41.22, "cpu_us_per_io": 30.04, "ctx_per_io": 3.98, "iops_spread_pct": 7.9, "reps": 3.0}, "randread-4k-qd8-j1": {"iops": 113202.84, "lat_p50_us": 70.14, "lat_p99_us": 80.38, "cpu_us_per_io": 13.8, "ctx_per_io": 1.89, "iops_spread_pct": 3.3, "reps": 3.0}, "randwrite-4k-qd1-j1": {"iops": 31895.96, "lat_p50_us": 27.78, "lat_p99_us": 45.82, "cpu_us_per_io": 33.39, "ctx_per_io": 4.1, "iops_spread_pct": 5.3, "reps": 3.0}, "randwrite-4k-qd8-j1": {"iops": 104356.83, "lat_p50_us": 75.26, "lat_p99_us": 89.6, "cpu_us_per_io": 14.25, "ctx_per_io": 1.92, "iops_spread_pct": 3.7, "reps": 3.0}, "read-128k-qd1-j1": {"iops": 10493.33, "lat_p50_us": 78.34, "lat_p99_us": 142.34, "cpu_us_per_io": 104.52, "ctx_per_io": 4.0, "iops_spread_pct": 16.1, "reps": 3.0}, "read-128k-qd8-j1": {"iops": 19689.42, "lat_p50_us": 403.46, "lat_p99_us": 423.94, "cpu_us_per_io": 65.31, "ctx_per_io": 1.95, "iops_spread_pct": 0.4, "reps": 3.0}}, "F1t4-fuse-hp-4threads": {"randread-4k-qd1-j1": {"iops": 24763.41, "lat_p50_us": 39.17, "lat_p99_us": 47.87, "cpu_us_per_io": 42.74, "ctx_per_io": 4.06, "iops_spread_pct": 4.8, "reps": 3.0}, "randread-4k-qd8-j1": {"iops": 245118.39, "lat_p50_us": 28.29, "lat_p99_us": 84.48, "cpu_us_per_io": 17.24, "ctx_per_io": 0.42, "iops_spread_pct": 1.9, "reps": 3.0}, "randwrite-4k-qd1-j1": {"iops": 22485.08, "lat_p50_us": 42.75, "lat_p99_us": 55.55, "cpu_us_per_io": 46.99, "ctx_per_io": 4.04, "iops_spread_pct": 0.4, "reps": 3.0}, "randwrite-4k-qd8-j1": {"iops": 228298.79, "lat_p50_us": 29.06, "lat_p99_us": 92.67, "cpu_us_per_io": 18.94, "ctx_per_io": 0.27, "iops_spread_pct": 7.9, "reps": 3.0}, "read-128k-qd1-j1": {"iops": 6015.5, "lat_p50_us": 146.43, "lat_p99_us": 224.26, "cpu_us_per_io": 170.35, "ctx_per_io": 4.09, "iops_spread_pct": 3.3, "reps": 3.0}, "read-128k-qd8-j1": {"iops": 70433.78, "lat_p50_us": 83.46, "lat_p99_us": 220.16, "cpu_us_per_io": 63.18, "ctx_per_io": 1.23, "iops_spread_pct": 1.9, "reps": 3.0}}, "F2-ext4-ublk-loop-brd": {"randwrite-4k-qd1-j1": {"iops": 39717.31, "lat_p50_us": 24.19, "lat_p99_us": 29.31, "cpu_us_per_io": 23.21, "ctx_per_io": 4.85, "iops_spread_pct": 1.0, "reps": 3.0}, "randwrite-4k-qd1-j4": {"iops": 87835.37, "lat_p50_us": 43.78, "lat_p99_us": 50.43, "cpu_us_per_io": 21.62, "ctx_per_io": 2.75, "iops_spread_pct": 3.1, "reps": 3.0}, "randwrite-4k-qd8-j1": {"iops": 137396.58, "lat_p50_us": 57.6, "lat_p99_us": 64.77, "cpu_us_per_io": 10.68, "ctx_per_io": 0.62, "iops_spread_pct": 0.4, "reps": 3.0}, "write-128k-qd1-j1": {"iops": 9266.19, "lat_p50_us": 104.96, "lat_p99_us": 118.27, "cpu_us_per_io": 109.69, "ctx_per_io": 5.0, "iops_spread_pct": 0.5, "reps": 3.0}, "write-128k-qd8-j1": {"iops": 13918.25, "lat_p50_us": 577.54, "lat_p99_us": 667.65, "cpu_us_per_io": 89.4, "ctx_per_io": 0.65, "iops_spread_pct": 0.2, "reps": 3.0}}, "F2nj-ext4-nojournal-ublk-loop-brd": {"randwrite-4k-qd1-j1": {"iops": 40809.16, "lat_p50_us": 23.42, "lat_p99_us": 28.29, "cpu_us_per_io": 22.4, "ctx_per_io": 4.82, "iops_spread_pct": 0.1, "reps": 3.0}, "randwrite-4k-qd1-j4": {"iops": 88056.95, "lat_p50_us": 43.78, "lat_p99_us": 49.92, "cpu_us_per_io": 21.81, "ctx_per_io": 2.74, "iops_spread_pct": 1.3, "reps": 3.0}, "randwrite-4k-qd8-j1": {"iops": 137154.09, "lat_p50_us": 57.6, "lat_p99_us": 64.26, "cpu_us_per_io": 10.85, "ctx_per_io": 0.62, "iops_spread_pct": 1.8, "reps": 3.0}, "write-128k-qd1-j1": {"iops": 9336.63, "lat_p50_us": 104.96, "lat_p99_us": 117.25, "cpu_us_per_io": 107.71, "ctx_per_io": 5.0, "iops_spread_pct": 0.9, "reps": 3.0}, "write-128k-qd8-j1": {"iops": 13958.55, "lat_p50_us": 577.54, "lat_p99_us": 602.11, "cpu_us_per_io": 88.87, "ctx_per_io": 0.65, "iops_spread_pct": 0.2, "reps": 3.0}}, "B2-brd-rerun": {"read-128k-qd1-j4": {"iops": 146999.8, "lat_p50_us": 26.24, "iops_spread_pct": 1.6, "reps": 5}, "read-128k-qd8-j4": {"iops": 143422.06, "lat_p50_us": 220.16, "iops_spread_pct": 1.1, "reps": 5}}};
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const NS = "http://www.w3.org/2000/svg";
+const el = (t, a = {}, txt) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (txt != null) e.textContent = txt; return e; };
+const fmt = (v, d = 1) => v >= 1000 ? Math.round(v).toLocaleString("en-US") : v.toFixed(d);
+const k = v => Math.round(v / 1000);
+
+const tip = document.getElementById("tip");
+function showTip(ev, html) { tip.innerHTML = html; tip.hidden = false; moveTip(ev); }
+function moveTip(ev) { const x = Math.min(ev.clientX + 14, innerWidth - tip.offsetWidth - 8); tip.style.left = x + "px"; tip.style.top = (ev.clientY + 14) + "px"; }
+function hideTip() { tip.hidden = true; }
+
+// Horizontal (grouped) bar chart. rows: [{label, bars:[{v, color, opacity, tip, label}]}]
+function hbar(id, rows, opt = {}) {
+  const host = document.getElementById(id);
+  const W = opt.width || 720, labW = opt.labW ?? 170, padR = 64, barH = opt.barH || 14, gap = 2, rowGap = opt.rowGap || 14;
+  const nb = Math.max(...rows.map(r => r.bars.length));
+  const rowH = nb * barH + (nb - 1) * gap;
+  const top = 6, axisH = 24, H = top + rows.length * rowH + (rows.length - 1) * rowGap + axisH;
+  const max = opt.max || Math.max(...rows.flatMap(r => r.bars.map(b => b.v))) * 1.05;
+  const plotW = W - labW - padR, x = v => labW + Math.max(0, Math.min(v, max)) / max * plotW;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": opt.aria || "" });
+  const ticks = opt.ticks || niceTicks(max);
+  ticks.forEach(t => {
+    svg.append(el("line", { x1: x(t), x2: x(t), y1: top - 4, y2: H - axisH + 2, stroke: css("--grid"), "stroke-width": 1 }));
+    svg.append(el("text", { x: x(t), y: H - 6, "text-anchor": "middle", class: "tick" }, t + (opt.tickUnit || "")));
+  });
+  if (opt.ref != null) svg.append(el("line", { x1: x(opt.ref), x2: x(opt.ref), y1: top - 4, y2: H - axisH + 2, stroke: css("--fg2"), "stroke-width": 1.5, "stroke-dasharray": "4 3" }));
+  rows.forEach((r, i) => {
+    const y0 = top + i * (rowH + rowGap);
+    svg.append(el("text", { x: labW - 10, y: y0 + rowH / 2 + 4, "text-anchor": "end", class: "grp" }, r.label));
+    r.bars.forEach((b, j) => {
+      const y = y0 + j * (barH + gap), w = Math.max(2, x(b.v) - labW);
+      const g = el("g");
+      const rect = el("path", { d: roundRight(labW, y, w, barH, 4), fill: b.color, opacity: b.opacity ?? 1 });
+      const hit = el("rect", { x: labW, y: y - 1, width: plotW, height: barH + 2, class: "hit" });
+      hit.addEventListener("mouseenter", ev => { rect.setAttribute("opacity", (b.opacity ?? 1) * .75); showTip(ev, b.tip); });
+      hit.addEventListener("mousemove", moveTip);
+      hit.addEventListener("mouseleave", () => { rect.setAttribute("opacity", b.opacity ?? 1); hideTip(); });
+      g.append(rect);
+      g.append(el("text", { x: labW + w + 6, y: y + barH / 2 + 4, class: "val" }, b.label ?? (fmt(b.v) + (opt.unit || ""))));
+      g.append(hit);
+      svg.append(g);
+    });
+  });
+  svg.append(el("line", { x1: labW, x2: labW, y1: top - 4, y2: H - axisH + 2, stroke: css("--axis"), "stroke-width": 1 }));
+  host.replaceChildren(svg);
+}
+function roundRight(x, y, w, h, r) { r = Math.min(r, w / 2, h / 2); return `M${x},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h - r}Q${x + w},${y + h} ${x + w - r},${y + h}H${x}Z`; }
+function niceTicks(max) { const raw = max / 4, p = 10 ** Math.floor(Math.log10(raw)), s = [1, 2, 2.5, 5, 10].find(m => m * p >= raw) * p; const t = []; for (let v = 0; v <= max + 1e-9; v += s) t.push(+v.toFixed(6)); return t; }
+function table(id, head, rows) {
+  const t = document.createElement("table");
+  t.innerHTML = "<thead><tr>" + head.map(h => `<th>${h}</th>`).join("") + "</tr></thead><tbody>" + rows.map(r => "<tr>" + r.map(c => `<td>${c}</td>`).join("") + "</tr>").join("") + "</tbody>";
+  document.getElementById(id).replaceChildren(t);
+}
+
+const S = {
+  "B0-null_blk": ["null_blk", "kernel"], "B2-brd": ["RAM disk (brd)", "kernel"], "F0-ext4-brd": ["ext4 on RAM disk", "kernel"],
+  "B1-ublk-null": ["ublk null", "ublk"], "B3-ublk-loop-brd": ["ublk loop → RAM disk", "ublk"], "F2-ext4-ublk-loop-brd": ["ext4 on ublk loop", "ublk"],
+  "F1-fuse-hp-ext4-brd": ["FUSE → ext4", "fuse"]
+};
+const g1 = (s, c, f) => D1[s][c][f];
+const g2 = (s, c, f) => D2[s][c][f];
+const nice = c => { const [rw, bs, qd, j] = c.split("-"); return `${rw.replace("rand", "rand ")} ${bs.toUpperCase().replace("K", " KB")} · ${qd}${j === "j4" ? " ×4 jobs" : ""}`; };
+
+function render() {
+  const col = f => css("--" + f);
+  const C = "randread-4k-qd1-j1";
+
+  // 1: latency per setup (run 1)
+  const order = ["B0-null_blk", "B2-brd", "F0-ext4-brd", "B1-ublk-null", "B3-ublk-loop-brd", "F2-ext4-ublk-loop-brd", "F1-fuse-hp-ext4-brd"];
+  hbar("c1", order.map(s => ({ label: S[s][0], bars: [{ v: g1(s, C, "lat_p50_us"), color: col(S[s][1]),
+    tip: `<b>${S[s][0]}</b><br>p50 ${fmt(g1(s, C, "lat_p50_us"))} µs · p99 ${fmt(g1(s, C, "lat_p99_us"))} µs<br>${fmt(g1(s, C, "iops"))} reads/s<br>${fmt(g1(s, C, "ctx_per_io"), 1)} context switches / request` }] })),
+    { unit: " µs", aria: "Median latency of a 4 KB random read per setup" });
+  table("t1", ["Setup", "p50 µs", "p99 µs", "reads/s", "CPU µs / req", "ctx sw / req", "run 2 p50 µs"], order.map(s => [S[s][0], fmt(g1(s, C, "lat_p50_us")), fmt(g1(s, C, "lat_p99_us")), fmt(g1(s, C, "iops")), fmt(g1(s, C, "cpu_us_per_io"), 2), fmt(g1(s, C, "ctx_per_io"), 2), D2[s] && D2[s][C] ? fmt(g2(s, C, "lat_p50_us")) : "–"]));
+
+  // 2: per-layer deltas (run 1)
+  const pairs = [["ublk interface", "B1-ublk-null", "B0-null_blk", "ublk"], ["ublk loop", "B3-ublk-loop-brd", "B2-brd", "ublk"], ["FUSE over ext4", "F1-fuse-hp-ext4-brd", "F0-ext4-brd", "fuse"]];
+  const dl = p => g1(p[1], C, "lat_p50_us") - g1(p[2], C, "lat_p50_us"), dc = p => g1(p[1], C, "cpu_us_per_io") - g1(p[2], C, "cpu_us_per_io");
+  const mx = Math.max(...pairs.map(dc)) * 1.08;
+  hbar("c2a", pairs.map(p => ({ label: p[0], bars: [{ v: dl(p), color: col(p[3]), label: "+" + fmt(dl(p)), tip: `<b>${p[0]}</b><br>+${fmt(dl(p))} µs median latency` }] })), { width: 420, labW: 116, max: mx, barH: 18, aria: "Extra latency per layer" });
+  hbar("c2b", pairs.map(p => ({ label: p[0], bars: [{ v: dc(p), color: col(p[3]), label: "+" + fmt(dc(p)), tip: `<b>${p[0]}</b><br>+${fmt(dc(p))} µs CPU per request` }] })), { width: 420, labW: 116, max: mx, barH: 18, aria: "Extra CPU per layer" });
+  table("t2", ["Layer", "Compared with", "+ latency µs", "+ CPU µs"], pairs.map(p => [p[0], S[p[2]][0], fmt(dl(p)), fmt(dc(p))]));
+
+  // 3: qd32 IOPS vs CPU (run 2)
+  const Q = "randread-4k-qd32-j1";
+  const o3 = ["B0-null_blk", "B1-ublk-null", "B2-brd", "B3-ublk-loop-brd", "F0-ext4-brd", "F1-fuse-hp-ext4-brd"];
+  const cmx = Math.max(...o3.map(s => g2(s, Q, "cpu_us_per_io"))) * 1.1;
+  hbar("c3a", o3.map(s => ({ label: S[s][0], bars: [{ v: g2(s, Q, "iops") / 1000, color: col(S[s][1]), label: k(g2(s, Q, "iops")) + "k",
+    tip: `<b>${S[s][0]}</b> · 32 in flight<br>${fmt(g2(s, Q, "iops"))} reads/s` }] })), { width: 420, labW: 140, barH: 16, rowGap: 10, max: 500, ticks: [0, 250, 500], aria: "Reads per second at queue depth 32" });
+  hbar("c3b", o3.map(s => ({ label: S[s][0], bars: [{ v: g2(s, Q, "cpu_us_per_io"), color: col(S[s][1]), label: fmt(g2(s, Q, "cpu_us_per_io")),
+    tip: `<b>${S[s][0]}</b> · 32 in flight<br>${fmt(g2(s, Q, "cpu_us_per_io"))} µs CPU per read` }] })), { width: 420, labW: 140, barH: 16, rowGap: 10, max: cmx, ticks: [0, 5, 10, 15], aria: "CPU per read at queue depth 32" });
+  table("t3", ["Setup", "reads/s", "CPU µs / read", "p50 µs"], o3.map(s => [S[s][0], fmt(g2(s, Q, "iops")), fmt(g2(s, Q, "cpu_us_per_io"), 2), fmt(g2(s, Q, "lat_p50_us"))]));
+
+  // 4: large requests, % of baseline (run 2; B2 baseline from the 5-repeat rerun for reads)
+  const base = (s, c) => (s === "B2-brd" && D2["B2-brd-rerun"][c]) ? D2["B2-brd-rerun"][c].iops : g2(s, c, "iops");
+  const cfg4 = ["read-128k-qd32-j1", "read-128k-qd1-j4", "read-128k-qd8-j4", "write-128k-qd1-j4", "write-128k-qd8-j4"];
+  const ser = [["ublk interface", "B1-ublk-null", "B0-null_blk", col("ublk"), 1], ["ublk loop", "B3-ublk-loop-brd", "B2-brd", col("ublk"), .55], ["FUSE over ext4", "F1-fuse-hp-ext4-brd", "F0-ext4-brd", col("fuse"), 1]];
+  const pct = (s, c) => g2(s[1], c, "iops") / base(s[2], c) * 100;
+  const nice4 = c => c === "read-128k-qd32-j1" ? "read 128 KB · qd32, 1 job" : nice(c);
+  hbar("c4", cfg4.map(c => ({ label: nice4(c), bars: ser.map(s => ({ v: pct(s, c), color: s[3], opacity: s[4], label: Math.round(pct(s, c)) + "%",
+    tip: `<b>${s[0]}</b> · ${nice4(c)}<br>${Math.round(pct(s, c))}% of baseline<br>${fmt(g2(s[1], c, "iops"))} vs ${fmt(base(s[2], c))} per second` })) })),
+    { labW: 200, barH: 10, rowGap: 14, ref: 100, ticks: [0, 50, 100, 150, 200], max: 210, tickUnit: "%", aria: "Large-request throughput as percent of kernel baseline" });
+  table("t4", ["Workload", ...ser.map(s => s[0] + " %"), "FUSE/s", "ext4/s"], cfg4.map(c => [nice4(c), ...ser.map(s => Math.round(pct(s, c))), fmt(g2("F1-fuse-hp-ext4-brd", c, "iops")), fmt(g2("F0-ext4-brd", c, "iops"))]));
+
+  // 5: FUSE settings (defaults = run 1 F1, options = run 2)
+  const opts = [["defaults", null], ["one thread", "F1s-fuse-hp-single"], ["4 threads", "F1t4-fuse-hp-4threads"], ["clone-fd", "F1cf-fuse-hp-clonefd"], ["no caching", "F1c-fuse-hp-nocache"]];
+  const ov = (o, c, f) => o[1] ? g2(o[1], c, f) : g1("F1-fuse-hp-ext4-brd", c, f);
+  const R1 = "randread-4k-qd1-j1", R8 = "randread-4k-qd8-j1";
+  hbar("c5a", opts.map(o => ({ label: o[0], bars: [{ v: ov(o, R1, "lat_p50_us"), color: col("fuse"), opacity: o[1] ? 1 : .5, label: fmt(ov(o, R1, "lat_p50_us")),
+    tip: `<b>FUSE, ${o[0]}</b><br>p50 ${fmt(ov(o, R1, "lat_p50_us"))} µs · p99 ${fmt(ov(o, R1, "lat_p99_us"))} µs<br>${fmt(ov(o, R1, "cpu_us_per_io"))} µs CPU / read` }] })), { width: 420, labW: 96, barH: 16, rowGap: 10, aria: "FUSE median latency by setting" });
+  hbar("c5b", opts.map(o => ({ label: o[0], bars: [{ v: ov(o, R8, "iops") / 1000, color: col("fuse"), opacity: o[1] ? 1 : .5, label: k(ov(o, R8, "iops")) + "k",
+    tip: `<b>FUSE, ${o[0]}</b> · 8 in flight<br>${fmt(ov(o, R8, "iops"))} reads/s` }] })), { width: 420, labW: 96, barH: 16, rowGap: 10, aria: "FUSE reads per second by setting" });
+  table("t5", ["Setting", "qd1 p50 µs", "qd1 p99 µs", "qd1 CPU µs", "qd8 reads/s", "qd8 writes/s"], opts.map(o => [o[0] + (o[1] ? "" : " (run 1)"), fmt(ov(o, R1, "lat_p50_us")), fmt(ov(o, R1, "lat_p99_us")), fmt(ov(o, R1, "cpu_us_per_io")), fmt(ov(o, R8, "iops")), fmt(ov(o, "randwrite-4k-qd8-j1", "iops"))]));
+
+  // 6: ext4-on-ublk writes (qd1 4 KB randwrite): B3 from run 1, F2/F2nj/F0 from run 2
+  const W1 = "randwrite-4k-qd1-j1";
+  const r6 = [["ext4 on RAM disk", F => g2("F0-ext4-brd", W1, F), "kernel"], ["raw ublk loop", F => g1("B3-ublk-loop-brd", W1, F), "ublk"],
+              ["ext4 on ublk loop", F => g2("F2-ext4-ublk-loop-brd", W1, F), "ublk"], ["… journal off", F => g2("F2nj-ext4-nojournal-ublk-loop-brd", W1, F), "ublk"]];
+  hbar("c6", r6.map(r => ({ label: r[0], bars: [{ v: r[1]("lat_p50_us"), color: col(r[2]), opacity: r[0].startsWith("ext4 on ublk") || r[0].startsWith("…") ? .55 : 1, label: fmt(r[1]("lat_p50_us")) + " µs",
+    tip: `<b>${r[0]}</b> · 4 KB write, one at a time<br>p50 ${fmt(r[1]("lat_p50_us"))} µs · ${fmt(r[1]("iops"))} writes/s<br>${fmt(r[1]("ctx_per_io"), 1)} context switches / write` }] })), { labW: 150, barH: 16, rowGap: 10, aria: "Median latency of a 4 KB write" });
+  table("t6", ["Woken per I/O (traced)", "raw ublk write", "ext4-on-ublk write", "ext4-on-ublk read"],
+    [["fio (the app)", "1.00", "1.00", "1.00"], ["ublk server", "1.00", "1.00", "1.00"], ["kernel worker (iomap_dio_complete_work)", "0", "<b>1.00</b>", "0"]]);
+
+  // 7: FUSE nocache (phase 5 diagnostic runs)
+  const N = [["read · 8 in flight", 225, 29], ["read · 1 at a time", 19, 14], ["write · 8 in flight", 205, 215]];
+  hbar("c7", N.map(n => ({ label: n[0], bars: [
+    { v: n[1], color: col("fuse"), label: n[1] + "k", tip: `<b>Default settings</b> · ${n[0]}<br>${n[1]}k per second` },
+    { v: n[2], color: col("fuse"), opacity: .5, label: n[2] + "k", tip: `<b>Caching off</b> · ${n[0]}<br>${n[2]}k per second` }] })),
+    { labW: 150, barH: 14, rowGap: 14, tickUnit: "k", aria: "FUSE throughput with caching on and off" });
+  table("t7", ["Per request (traced)", "default read ×8", "no-cache read ×8", "no-cache read ×1", "no-cache write ×8"],
+    [["GETATTR round trips", "0", "<b>1.00</b>", "1.00", "0"], ["FUSE requests in flight (mean / max)", "2.9 / 8", "<b>1.4 / 2</b>", "0.8 / 1", "3.1 / 8"], ["context switches", "1.4", "6.1", "8.3", "1.3"], ["median latency µs", "33.0", "272.4", "68.1", "34.6"]]);
+}
+render();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+</script>
